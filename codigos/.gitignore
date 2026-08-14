@@ -1,0 +1,24 @@
+# Configurações locais / Chaves de API
+.env
+
+# Pesos do YOLOv8
+*.pt
+runs/
+
+# Datasets baixados
+Traffic-Lights-*/
+Imagens-Cognimove-*/
+
+# Arquivos de mídia pesados
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.jpg
+*.jpeg
+*.png
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
