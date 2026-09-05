@@ -11,7 +11,10 @@ Baseado na Tabela 1 e Seção 4.2 do artigo:
 from __future__ import annotations
 
 import copy
+import logging
 from enum import Enum
+
+logger = logging.getLogger(__name__)
 
 
 class Causa(str, Enum):
@@ -88,6 +91,11 @@ class MotorCausaRaiz:
         """
         base = self.TABELA_PROBABILIDADES_BASE.get(tipo_infracao)
         if base is None:
+            logger.error(
+                "Tipo de infração não mapeado em TABELA_PROBABILIDADES_BASE: %r. "
+                "Verifique se o nome bate com o usado nas regras de detecção.",
+                tipo_infracao,
+            )
             return {
                 "causa_principal": "Desconhecida",
                 "confianca":       0.0,

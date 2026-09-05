@@ -161,6 +161,50 @@ def test_detector_fallback_warnings():
         detector_logger.removeHandler(handler)
 
 
+def test_tipo_infracao_nao_mapeado_emite_error(caplog=None):
+    """Valida se uma infração não mapeada emite log ERROR contendo o tipo inválido."""
+    import logging
+
+    motor = MotorCausaRaiz()
+    ctx = GerenciadorContextoUrbano().obter_contexto_atual()
+    tipo_invalido = "TIPO_INEXISTENTE"
+
+    if caplog is not None:
+        with caplog.at_level(logging.ERROR):
+            res = motor.calcular_probabilidades(tipo_invalido, ctx)
+            assert res["causa_principal"] == "Desconhecida"
+            assert res["confianca"] == 0.0
+            assert res["distribuicao"] == {}
+            assert any(
+                record.levelno == logging.ERROR and tipo_invalido in record.message
+                for record in caplog.records
+            ), f"Mensagem ERROR contendo {tipo_invalido} esperada nos registros do caplog."
+    else:
+        mensagens_error = []
+
+        class ErrorHandlerCaptura(logging.Handler):
+            def emit(self, record):
+                if record.levelno >= logging.ERROR:
+                    mensagens_error.append(record.getMessage())
+
+        handler = ErrorHandlerCaptura()
+        causa_logger = logging.getLogger("backend.analytics.causa_raiz")
+        causa_logger.addHandler(handler)
+        causa_logger.setLevel(logging.ERROR)
+        try:
+            res = motor.calcular_probabilidades(tipo_invalido, ctx)
+            assert res["causa_principal"] == "Desconhecida"
+            assert res["confianca"] == 0.0
+            assert res["distribuicao"] == {}
+            assert any(
+                tipo_invalido in m for m in mensagens_error
+            ), f"Mensagem ERROR contendo {tipo_invalido} esperada nos logs."
+        finally:
+            causa_logger.removeHandler(handler)
+
+    print("[OK] Teste de log ERROR para tipo de infração inválido passou com sucesso!")
+
+
 if __name__ == "__main__":
     print(f"Python version: {sys.version}")
     print(f"Pandas: {pd.__version__} | Plotly: {plotly.__version__} | Streamlit: {st.__version__}")
@@ -169,6 +213,7 @@ if __name__ == "__main__":
     test_validacao_detecta_causa_orfa()
     test_chuva_forte_modificador()
     test_detector_fallback_warnings()
+    test_tipo_infracao_nao_mapeado_emite_error()
     print("\n====================================================")
     print(" TODOS OS TESTES PASSARAM COM SUCESSO! ")
     print("====================================================")
