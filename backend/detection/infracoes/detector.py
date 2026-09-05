@@ -318,27 +318,56 @@ class InfracaoDetector:
         cv2.circle(frame,(cx,cy),r,lc,-1)
         cv2.circle(frame,(cx,cy),r,(200,200,200),1)
 
+    # ── Resolução de fonte ───────────────────────────────────────────────────
+
+    @staticmethod
+    def resolver_fonte(source: str | int | float, root: Path | None = None) -> str | int:
+        """Resolve a fonte de vídeo (webcam numérica, URL de stream ou arquivo local).
+
+        Ordem de busca para arquivos:
+          1. Caminho absoluto existente
+          2. Relativo à raiz do projeto (_ROOT / p)
+          3. Dentro de videos_teste/ (_ROOT / "videos_teste" / p.name)
+          4. Dentro de videos_originais/ (_ROOT / "videos_originais" / p.name)
+
+        Nota de arquitetura:
+          Esta lógica de resolução de caminhos pode ser unificada futuramente com os
+          outros pontos de uso do projeto (monitorar_infracoes.py, calibrar_camera.py,
+          teste_video.py, identificar_limite.py) através de uma função compartilhada
+          em backend/detection/utils_video.py.
+        """
+        if root is None:
+            root = _ROOT
+
+        if isinstance(source, str):
+            src_str = source.strip()
+            if src_str.isdigit():
+                return int(src_str)
+            if src_str.startswith(("rtsp://", "rtmp://", "http://", "https://")):
+                return src_str
+            p = Path(src_str)
+            if p.is_absolute() and p.exists():
+                return str(p)
+            if (root / p).exists():
+                return str(root / p)
+            if (root / "videos_teste" / p.name).exists():
+                return str(root / "videos_teste" / p.name)
+            if (root / "videos_originais" / p.name).exists():
+                return str(root / "videos_originais" / p.name)
+            return src_str
+
+        if isinstance(source, (int, float)):
+            return int(source)
+
+        return source
+
     # ── Loop principal ────────────────────────────────────────────────────────
 
     def run(self):
         """Inicia o loop de detecção. Bloqueia até encerrar."""
         self._running = True
 
-        src = self.source
-        if isinstance(src, str):
-            src_str = src.strip()
-            if src_str.isdigit():
-                src = int(src_str)
-            elif not src_str.startswith(("rtsp://", "http://", "https://")):
-                p = Path(src_str)
-                if p.is_absolute() and p.exists():
-                    src = str(p)
-                elif (_ROOT / p).exists():
-                    src = str(_ROOT / p)
-                elif (_ROOT / "videos_teste" / p.name).exists():
-                    src = str(_ROOT / "videos_teste" / p.name)
-        elif isinstance(src, (int, float)):
-            src = int(src)
+        src = self.resolver_fonte(self.source)
 
         cap = cv2.VideoCapture(src)
         if not cap.isOpened():
