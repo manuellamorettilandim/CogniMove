@@ -16,6 +16,9 @@ class GerenciadorRelatorio:
         "timestamp", "frame", "tipo", "descricao",
         "track_id", "classe", "confianca", "camera",
         "screenshot", "clip",
+        # Campos do Módulo 2 — Análise de Causa-Raiz
+        "causa_principal", "causa_confianca",
+        "cenarios_ativos", "distribuicao_causas",
     ]
 
     def __init__(self, output_dir: str, camera_name: str = "camera"):
@@ -39,9 +42,17 @@ class GerenciadorRelatorio:
 
     # ── API pública ───────────────────────────────────────────────────────────
 
-    def adicionar(self, infracao: dict, evidencias: dict = None):
-        """Adiciona uma infração ao relatório (CSV + JSON)."""
+    def adicionar(self, infracao: dict, evidencias: dict = None,
+                  analise_causa: dict = None):
+        """Adiciona uma infração ao relatório (CSV + JSON).
+
+        Args:
+            infracao:       Dados da infração detectada.
+            evidencias:     Caminhos de screenshot e clip gerados.
+            analise_causa:  Resultado do MotorCausaRaiz.calcular_probabilidades().
+        """
         ev = evidencias or {}
+        ac = analise_causa or {}
         record = {
             "timestamp":  infracao.get("timestamp", datetime.datetime.now().isoformat()),
             "frame":      infracao.get("frame", 0),
@@ -53,6 +64,11 @@ class GerenciadorRelatorio:
             "camera":     self.camera_name,
             "screenshot": ev.get("screenshot", ""),
             "clip":       ev.get("clip", ""),
+            # Módulo 2 — Causa-Raiz
+            "causa_principal":    ac.get("causa_principal", ""),
+            "causa_confianca":    round(float(ac.get("confianca", 0.0)), 4),
+            "cenarios_ativos":    ", ".join(ac.get("fatores_ativos", [])),
+            "distribuicao_causas": json.dumps(ac.get("distribuicao", {}), ensure_ascii=False),
         }
         with self._lock:
             self._records.append(record)

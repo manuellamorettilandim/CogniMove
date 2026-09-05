@@ -22,6 +22,7 @@ _HERE    = Path(__file__).resolve().parent   # detection/
 _BACKEND = _HERE.parent                      # backend/
 _ROOT    = _BACKEND.parent                   # Cognimove_Melissa/
 sys.path.insert(0, str(_HERE))
+sys.path.insert(0, str(_BACKEND))
 
 
 def parse_args():
@@ -139,6 +140,12 @@ def main():
 
     # Importar detector após configurar o path
     from infracoes.detector import InfracaoDetector
+    from analytics.contexto_urbano import GerenciadorContextoUrbano
+    from analytics.causa_raiz import MotorCausaRaiz
+
+    # Instâncias compartilhadas dos módulos analíticos
+    contexto_urbano  = GerenciadorContextoUrbano()
+    motor_causa_raiz = MotorCausaRaiz()
 
     detector = InfracaoDetector(
         source          = source,
@@ -149,6 +156,8 @@ def main():
         show_window     = args.janela or not args.dashboard,
         frame_queue     = frame_q     if args.dashboard else None,
         infracoes_queue = infracoes_q if args.dashboard else None,
+        contexto_urbano  = contexto_urbano,
+        motor_causa_raiz = motor_causa_raiz,
     )
 
     print("=" * 60)

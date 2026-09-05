@@ -25,6 +25,11 @@ from infracoes.regras.bloqueio_cruzamento import RegraBloqueioCruzamento
 from infracoes.evidencias            import GerenciadorEvidencias
 from infracoes.relatorio             import GerenciadorRelatorio
 
+# Módulos analíticos (Módulos 2 e 3 do artigo)
+sys.path.insert(0, str(_BACKEND))
+from analytics.contexto_urbano       import GerenciadorContextoUrbano
+from analytics.causa_raiz            import MotorCausaRaiz
+
 # Classes que o best.pt pode chamar de semáforo
 _SEMAFORO_LABELS = {"semaforo", "semáforo", "traffic_light", "trafficlight"}
 
@@ -85,7 +90,9 @@ class InfracaoDetector:
                  camera_name:     str   = "camera",
                  show_window:     bool  = False,
                  frame_queue:     queue.Queue | None = None,
-                 infracoes_queue: queue.Queue | None = None):
+                 infracoes_queue: queue.Queue | None = None,
+                 contexto_urbano: GerenciadorContextoUrbano | None = None,
+                 motor_causa_raiz: MotorCausaRaiz | None = None):
         """
         Args:
             source:          0 (webcam), "rtsp://...", ou caminho de arquivo .mp4
@@ -105,6 +112,10 @@ class InfracaoDetector:
         self.infracoes_queue = infracoes_queue
         self._running        = False
         self.frame_idx       = 0
+
+        # Módulos analíticos (Módulos 2 e 3)
+        self.contexto_urbano  = contexto_urbano  or GerenciadorContextoUrbano()
+        self.motor_causa_raiz = motor_causa_raiz  or MotorCausaRaiz()
 
         self.models_dir = models_dir or str(_BACKEND / "models")
         self.output_dir = output_dir or str(_BACKEND / "outputs")
@@ -199,10 +210,17 @@ class InfracaoDetector:
         infractions += self.regra_sinal.checar(frame, tracks, detected_lights, self.frame_idx)
         infractions += self.regra_bloq.checar(frame, tracks, light_state, self.frame_idx)
 
-        # 4. Registrar evidências e relatório
+        # 4. Registrar evidências e relatório (com causa-raiz)
         for inf in infractions:
             ev = self.evidencias.registrar(inf, frame)
-            self.relatorio.adicionar(inf, ev)
+
+            # Módulo 2+3: obter contexto e calcular causa-raiz
+            contexto = self.contexto_urbano.obter_contexto_atual()
+            analise  = self.motor_causa_raiz.calcular_probabilidades(
+                inf["tipo"], contexto
+            )
+
+            self.relatorio.adicionar(inf, ev, analise_causa=analise)
             self.stats["total"] += 1
             self.stats[inf["tipo"]] = self.stats.get(inf["tipo"], 0) + 1
             if self.infracoes_queue is not None:

@@ -28,100 +28,48 @@ O **CogniMove** é uma solução completa e moderna de visão computacional volt
 - **Mini-Clips em MP4**: Buffer circular de vídeo que grava automaticamente 3 segundos **antes** e 2 segundos **depois** do evento de infração.
 - **Relatórios Estruturados**: Exportação em tempo real para arquivos `.csv` e `.json` em `backend/outputs/relatorios/`.
 
-### 5. 🌐 Dashboard Web Interativo (Flask)
-- Servidor web Flask (`frontend/app.py`) fornecendo:
-  - Streaming de vídeo ao vivo (MJPEG) com overlays de detecção.
-  - Painel de estatísticas (total de infrações por categoria).
-  - Feed em tempo real de infrações recentes com fotos e links para download.
-  - Seleção dinâmica de câmeras/fontes de vídeo e carregamento de presets.
+### 5. 🧠 Módulo de Causa-Raiz & Contexto Urbano (Módulos 2 e 3 do Artigo)
+- **Contexto Urbano em Tempo Real (`backend/analytics/contexto_urbano.py`)**: Gerencia o estado de variáveis ambientais e urbanas (chuva forte, horário de pico, eventos/dias de jogo, feriados, obras viárias).
+- **Motor Probabilístico de Causa-Raiz (`backend/analytics/causa_raiz.py`)**: Correlaciona cada infração com fatores urbanos e gera a distribuição probabilística das causas prováveis (ex: ausência de segregador, tempo semafórico inadequado, congestionamento, pintura desgastada).
+- **Relatórios Enriquecidos**: Cada registro agora armazena `causa_principal`, `causa_confianca`, `cenarios_ativos` e `distribuicao_causas`.
 
-### 6. 🧪 Suíte de Testes Automatizados (`testar_regras.py`)
-- Script de testes unitários para validação de lógica de detecção, regras de cruzamento, geração de relatórios e inferências HSV sem depender de vídeo físico.
+### 6. 📊 Estação Interativa & Dashboard Web (Módulo 4 do Artigo)
+- **Dashboard Interativo Streamlit (`frontend/dashboard_streamlit.py`)**:
+  - **Área 1**: Simulador de Câmera Urbana com reprodução ao vivo, caixas delimitadoras e alertas interpretáveis ("Infração Detectada — Confiança da IA: 96% | Causa-Raiz: ...").
+  - **Área 2**: Simulador de Fatores Externos com controles para alternar cenários em tempo real.
+  - **Área 3**: Centro de Diagnóstico Inteligente com gráficos de causas-raiz (Plotly), KPIs e recomendações automatizadas para gestores públicos.
+- **Servidor Flask Legado (`frontend/app.py`)**: Mantido para compatibilidade com streaming MJPEG via navegador.
 
----
-
-## 🎓 Tipos de Treinamento Utilizados
-
-No projeto CogniMove, foram estruturadas e utilizadas 3 estratégias complementares de treinamento e fine-tuning:
-
-```
-                      ┌──────────────────────────────────────────┐
-                      │    YOLOv8 Base (Pré-treinado COCO)       │
-                      └────────────────────┬─────────────────────┘
-                                           │
-         ┌─────────────────────────────────┴─────────────────────────────────┐
-         ▼                                                                   ▼
-┌─────────────────────────────────┐                         ┌─────────────────────────────────┐
-│   Treinamento Sintético Local   │                         │    Treinamento Cloud Roboflow   │
-│ (`dataset_limite.py` + Augment) │                         │  (`yolo_roboflow_predict.py`)   │
-└────────────────┬────────────────┘                         └────────────────┬────────────────┘
-                 │                                                           │
-                 └─────────────────────────┬─────────────────────────────────┘
-                                           ▼
-                            ┌──────────────────────────────┐
-                            │ Pesos Finais: `best.pt`      │
-                            │ (Classes: Limite, Faixa,     │
-                            │  Semáforo)                   │
-                            └──────────────────────────────┘
-```
-
-### 1. Fine-Tuning por Transfer Learning (YOLOv8)
-- **Modelo Base**: `yolov8n.pt` (YOLOv8 Nano, leve e otimizado para inferência em tempo real no CPU/GPU).
-- **Técnica**: Congelamento de camadas convolucionais iniciais para reaproveitar extratores de características genéricos e ajuste das camadas finais para as classes específicas do domínio viário:
-  - `0: Limite` (Linha de retenção de parada obrigatória)
-  - `1: Faixa_Pedestre` (Zebrada ou Bike Box)
-  - `2: Semaforo` (Corpo do semáforo)
-
-### 2. Geração de Dataset Sintético & Data Augmentation Local (`dataset_limite.py`)
-- **Amostragem de Vídeos**: Extração de frames espaçados a partir de vídeos reais de tráfego (`videos_originais/` e `videos_teste/`).
-- **Data Augmentation**: Aplicação programática de transformações para simular variações de clima, horário e qualidade de câmera:
-  - **Ajuste de Brilho e Contraste**: Fator aleatório de 0.7 a 1.3.
-  - **Ruído Gaussiano**: Simulação de granulação noturna e chuva.
-  - **Desfoque (Blur)**: Simulação de perda de foco ou chuva no vidro da câmera.
-  - **Flip Horizontal**: Inversão da pista mantendo as coordenadas Bounding Box sincronizadas.
-- **Divisão do Dataset**: 70% Treino, 20% Validação, 10% Teste.
-
-### 3. Treinamento & Anotação via Roboflow Cloud (`yolo_roboflow_predict.py`)
-- Integration via API Roboflow (`ROBOFLOW_API_KEY`) no workspace `mell-sowg7` (projeto `imagens-cognimove`).
-- Permite rotulagem em nuvem, exportação direta no formato YOLOv8 e treinamento com datasets expandidos da comunidade.
+### 7. 🧪 Suíte de Testes Automatizados (`testar_regras.py` & `test_analytics.py`)
+- Validação contínua de lógica geométrica, regras espaciais, motor probabilístico e consistência dos relatórios.
 
 ---
 
-## 💻 Como Treinar o Modelo pelo Terminal
-
-### Opção 1: Usando o Script Automático do Projeto (Recomendado)
-```bash
-python backend/training/yolo_train.py
-```
-
-### Opção 2: Usando a CLI Direta do Ultralytics
-```bash
-yolo detect train data=backend/training/configs/data_limite.yaml model=yolov8n.pt epochs=25 imgsz=640 batch=8
-```
-
----
-
-## 📁 Estrutura do Projeto
+## 📁 Estrutura do Projeto Atualizada
 
 ```
-Cognimove_Melissa/
-├── .env                              ← chave da API do Roboflow
-├── requirements.txt                  ← dependências do projeto
-├── README.md                         ← documentação principal
+COGNIMOVE/
+├── requirements.txt                  ← dependências (ultralytics, streamlit, plotly, pandas, etc.)
+├── README.md                         ← documentação principal do projeto
 │
 ├── backend/
+│   ├── analytics/                    ← MÓDULOS 2 E 3 (ARTIGO CIENTÍFICO)
+│   │   ├── __init__.py
+│   │   ├── contexto_urbano.py        ← Módulo 3: Fatores externos e dados urbanos
+│   │   └── causa_raiz.py             ← Módulo 2: Motor probabilístico de causa-raiz
+│   │
 │   ├── models/
-│   │   ├── best.pt                   ← pesos do modelo customizado
+│   │   ├── best.pt                   ← pesos do modelo customizado (linhas, faixas, semáforos)
 │   │   └── yolov8n.pt                ← pesos base COCO (veículos)
 │   │
 │   ├── detection/
-│   │   ├── monitorar_infracoes.py    ← PONTO DE ENTRADA PRINCIPAL
-│   │   ├── testar_regras.py          ← suíte de testes unitários
+│   │   ├── monitorar_infracoes.py    ← PONTO DE ENTRADA CLI COM CAUSA-RAIZ
+│   │   ├── testar_regras.py          ← suíte de testes de regras
 │   │   └── infracoes/
-│   │       ├── detector.py           ← orquestrador de detecção
+│   │       ├── detector.py           ← orquestrador com integração analítica
 │   │       ├── rastreador.py         ← ByteTrack tracker
 │   │       ├── evidencias.py         ← gerador de fotos e vídeos MP4
-│   │       ├── relatorio.py          ← gravação em CSV e JSON
+│   │       ├── relatorio.py          ← gravação em CSV e JSON com causa-raiz
 │   │       └── regras/
 │   │           ├── sinal_vermelho.py     ← infração de semáforo
 │   │           ├── faixa_pedestre.py     ← infração de faixa/bike box
@@ -131,17 +79,15 @@ Cognimove_Melissa/
 │   │   ├── calibrar_camera.py        ← ferramenta interativa OpenCV
 │   │   └── presets/                  ← configurações salvas em JSON
 │   │
-│   ├── training/
-│   │   ├── yolo_train.py             ← pipeline automático de treino
-│   │   ├── dataset_limite.py         ← gerador de dataset sintético
-│   │   └── yolo_roboflow_predict.py  ← integração Roboflow Cloud
-│   │
-│   └── outputs/                      ← evidências e relatórios
+│   └── outputs/
+│       ├── evidencias/               ← prints e vídeos recortados
+│       └── relatorios/               ← relatórios CSV e JSON enriquecidos
 │
 └── frontend/
-    ├── app.py                        ← servidor Flask do Dashboard
-    ├── templates/index.html          ← interface web
-    └── static/                       ← CSS e JS do dashboard
+    ├── dashboard_streamlit.py        ← ESTAÇÃO INTERATIVA PRINCIPAL (MÓDULO 4)
+    ├── app.py                        ← servidor Flask legado
+    ├── templates/                    ← templates HTML do Flask
+    └── static/                       ← CSS e JS estáticos
 ```
 
 ---
@@ -153,18 +99,28 @@ Cognimove_Melissa/
 pip install -r requirements.txt
 ```
 
-### 2. Rodar o Sistema com Dashboard Web
+### 2. Iniciar a Estação Interativa (Recomendado — Módulo 4)
+Inicia o dashboard completo com simulador de câmera, toggles de cenários urbanos e diagnósticos analíticos:
 ```bash
-python backend/detection/monitorar_infracoes.py --source videos_teste/video_teste.mp4 --dashboard
-# Acesse no navegador: http://localhost:5000
+streamlit run frontend/dashboard_streamlit.py
+```
+
+### 3. Executar o Monitoramento via CLI
+Para processamento em lote ou integração com câmeras IP:
+```bash
+# Executar com janela OpenCV e gravação enriquecida
+python backend/detection/monitorar_infracoes.py --source videos_originais/video_teste.mp4 --janela
+
+# Executar com preset específico
+python backend/detection/monitorar_infracoes.py --source videos_originais/video_teste.mp4 --preset caetano_alvares --janela
 ```
 
 ## ⚙️ Argumentos CLI
 ```
---source  -s   Fonte de vídeo (0, rtsp://..., arquivo.mp4)
---preset  -p   Preset de câmera (nome sem .json)
+--source  -s   Fonte de vídeo (0, rtsp://..., caminho/arquivo.mp4)
+--preset  -p   Preset de câmera em calibration/presets/ (sem .json)
 --camera  -c   Nome identificador da câmera
---janela  -j   Exibir janela OpenCV
---dashboard -d Iniciar dashboard web Flask
---porta   -P   Porta do dashboard (padrão: 5000)
+--janela  -j   Exibir janela OpenCV durante o processamento
+--dashboard -d Iniciar dashboard legado em Flask
+--porta   -P   Porta do dashboard legado (padrão: 5000)
 ```
