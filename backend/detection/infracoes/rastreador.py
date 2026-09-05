@@ -13,6 +13,9 @@ VEHICLE_NAMES   = {
     3: "Moto",     5: "Onibus",    7: "Caminhao",
 }
 
+# Classes que representam veículos (motorizados e não-motorizados) que podem cometer infrações de trânsito
+CLASSES_VEICULARES = [1, 2, 3, 5, 7]
+
 
 class VehicleTrack:
     """Representa o estado atual e histórico de um veículo rastreado."""

@@ -21,7 +21,7 @@ _ROOT    = _BACKEND.parent                          # Cognimove_Melissa/
 sys.path.insert(0, str(_DETECT))
 
 from ultralytics import YOLO
-from infracoes.rastreador             import Rastreador
+from infracoes.rastreador             import Rastreador, CLASSES_VEICULARES
 from infracoes.regras.faixa_pedestre import RegraFaixaPedestre
 from infracoes.regras.sinal_vermelho import RegraSinalVermelho
 from infracoes.regras.bloqueio_cruzamento import RegraBloqueioCruzamento
@@ -207,8 +207,11 @@ class InfracaoDetector:
     def _process_frame(self, frame):
         self.frame_idx += 1
 
-        # 1. Rastreamento de veículos
+        # 1. Rastreamento de veículos e pedestres
         tracks = self.rastreador.update(frame)
+
+        # Filtrar apenas veículos para as regras de infração (pedestres continuam em tracks para exibição)
+        tracks_veiculos = [t for t in tracks if t.cls_id in CLASSES_VEICULARES]
 
         # 2. Detectar semáforos
         detected_lights: list[dict] = []
@@ -223,11 +226,11 @@ class InfracaoDetector:
 
         light_state = self.regra_sinal.get_light_state()
 
-        # 3. Aplicar regras
+        # 3. Aplicar regras (apenas para classes veiculares)
         infractions: list[dict] = []
-        infractions += self.regra_faixa.checar(frame, tracks, light_state, self.frame_idx)
-        infractions += self.regra_sinal.checar(frame, tracks, detected_lights, self.frame_idx)
-        infractions += self.regra_bloq.checar(frame, tracks, light_state, self.frame_idx)
+        infractions += self.regra_faixa.checar(frame, tracks_veiculos, light_state, self.frame_idx)
+        infractions += self.regra_sinal.checar(frame, tracks_veiculos, detected_lights, self.frame_idx)
+        infractions += self.regra_bloq.checar(frame, tracks_veiculos, light_state, self.frame_idx)
 
         # 4. Registrar evidências e relatório (com causa-raiz)
         for inf in infractions:
