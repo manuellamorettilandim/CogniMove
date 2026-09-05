@@ -7,8 +7,11 @@ import os
 import cv2
 import time
 import datetime
+import itertools
 import threading
 from collections import deque
+
+_clip_id_counter = itertools.count()
 
 
 class GerenciadorEvidencias:
@@ -63,6 +66,7 @@ class GerenciadorEvidencias:
         with self._lock:
             pre_frames = list(self._frame_buffer)
             clip_data  = {
+                "id":            next(_clip_id_counter),
                 "frames":        pre_frames,
                 "frames_needed": self.buffer_size + self.post_size,
                 "meta":          {"tipo": tipo, "ts": ts, "tid": tid},
@@ -97,6 +101,8 @@ class GerenciadorEvidencias:
 
         frames = clip_data["frames"]
         if not frames:
+            with self._lock:
+                self._pending = [c for c in self._pending if c.get("id") != clip_data.get("id")]
             return
 
         h, w  = frames[0].shape[:2]
@@ -108,8 +114,7 @@ class GerenciadorEvidencias:
         clip_data["path"] = clip_path
 
         with self._lock:
-            if clip_data in self._pending:
-                self._pending.remove(clip_data)
+            self._pending = [c for c in self._pending if c.get("id") != clip_data.get("id")]
 
     def _draw_overlay(self, frame, infracao: dict):
         """Adiciona barra de status e destaque do veículo no screenshot."""
