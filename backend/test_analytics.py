@@ -1,3 +1,10 @@
+"""
+CogniMove — Smoke Test Manual de Analytics
+
+ATENÇÃO: Este script serve apenas para validação rápida e manual no terminal.
+Ele NÃO substitui a suíte de testes unitários formal localizada em:
+  backend/tests/ (executável via `pytest backend/tests/`)
+"""
 import sys
 from pathlib import Path
 
