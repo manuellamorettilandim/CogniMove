@@ -5,8 +5,11 @@ Orquestra modelos YOLO, rastreador ByteTrack e todas as regras de infração.
 from __future__ import annotations
 import os, sys, cv2, json, queue
 import datetime
+import logging
 import numpy as np
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # ── Paths absolutos ───────────────────────────────────────────────────────────
 _HERE    = Path(__file__).resolve().parent          # infracoes/
@@ -114,8 +117,24 @@ class InfracaoDetector:
         self.frame_idx       = 0
 
         # Módulos analíticos (Módulos 2 e 3)
-        self.contexto_urbano  = contexto_urbano  or GerenciadorContextoUrbano()
-        self.motor_causa_raiz = motor_causa_raiz  or MotorCausaRaiz()
+        if contexto_urbano is None:
+            logger.warning(
+                "InfracaoDetector(%s) instanciado sem contexto_urbano compartilhado — "
+                "usando instância isolada; alterações feitas no dashboard não serão "
+                "refletidas neste detector.",
+                camera_name,
+            )
+            contexto_urbano = GerenciadorContextoUrbano()
+        self.contexto_urbano = contexto_urbano
+
+        if motor_causa_raiz is None:
+            logger.warning(
+                "InfracaoDetector(%s) instanciado sem motor_causa_raiz compartilhado — "
+                "usando instância isolada.",
+                camera_name,
+            )
+            motor_causa_raiz = MotorCausaRaiz()
+        self.motor_causa_raiz = motor_causa_raiz
 
         self.models_dir = models_dir or str(_BACKEND / "models")
         self.output_dir = output_dir or str(_BACKEND / "outputs")

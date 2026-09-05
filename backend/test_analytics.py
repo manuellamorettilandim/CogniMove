@@ -113,6 +113,54 @@ def test_chuva_forte_modificador():
     )
 
 
+def test_detector_fallback_warnings():
+    """Valida se o construtor do InfracaoDetector emite warnings quando instanciado sem contexto ou motor."""
+    import logging
+    from backend.detection.infracoes.detector import InfracaoDetector
+
+    detector_logger = logging.getLogger("backend.detection.infracoes.detector")
+    mensagens_log = []
+
+    class HandlerCaptura(logging.Handler):
+        def emit(self, record):
+            mensagens_log.append(record.getMessage())
+
+    handler = HandlerCaptura()
+    detector_logger.addHandler(handler)
+    detector_logger.setLevel(logging.WARNING)
+
+    try:
+        # Caso 1: Sem contexto_urbano e sem motor_causa_raiz
+        d1 = InfracaoDetector(source=0, camera_name="Camera Teste 1")
+        assert any("sem contexto_urbano compartilhado" in m for m in mensagens_log), (
+            "Warning de contexto_urbano esperado"
+        )
+        assert any("sem motor_causa_raiz compartilhado" in m for m in mensagens_log), (
+            "Warning de motor_causa_raiz esperado"
+        )
+        assert d1.contexto_urbano is not None
+        assert d1.motor_causa_raiz is not None
+
+        # Caso 2: Com ambos passados explicitamente (nenhum warning emitido)
+        mensagens_log.clear()
+        ctx = GerenciadorContextoUrbano()
+        mot = MotorCausaRaiz()
+        d2 = InfracaoDetector(
+            source=0,
+            camera_name="Camera Teste 2",
+            contexto_urbano=ctx,
+            motor_causa_raiz=mot,
+        )
+        assert len(mensagens_log) == 0, (
+            f"Nenhum warning deveria ser emitido quando instâncias são passadas, mas recebeu: {mensagens_log}"
+        )
+        assert d2.contexto_urbano is ctx
+        assert d2.motor_causa_raiz is mot
+        print("[OK] Teste de warnings no fallback do InfracaoDetector passou com sucesso!")
+    finally:
+        detector_logger.removeHandler(handler)
+
+
 if __name__ == "__main__":
     print(f"Python version: {sys.version}")
     print(f"Pandas: {pd.__version__} | Plotly: {plotly.__version__} | Streamlit: {st.__version__}")
@@ -120,6 +168,7 @@ if __name__ == "__main__":
     test_modificadores_sem_causas_orfas()
     test_validacao_detecta_causa_orfa()
     test_chuva_forte_modificador()
+    test_detector_fallback_warnings()
     print("\n====================================================")
     print(" TODOS OS TESTES PASSARAM COM SUCESSO! ")
     print("====================================================")
