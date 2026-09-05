@@ -73,12 +73,14 @@ def test_modificador_existe_na_base():
         for causa in sub_tabela.keys()
     }
 
-    for cenario, (causa, incremento) in MotorCausaRaiz.MODIFICADORES.items():
-        assert causa in causas_base, (
-            f"Regressão detectada: O modificador '{cenario}' referencia a causa órfã '{causa}' "
-            f"que não existe na TABELA_PROBABILIDADES_BASE."
-        )
-        assert incremento > 0.0, f"O incremento do modificador '{cenario}' deve ser positivo."
+    for cenario, ajustes in MotorCausaRaiz.MODIFICADORES.items():
+        assert isinstance(ajustes, list), f"Modificador '{cenario}' deve ser uma lista de tuplas."
+        for causa, incremento in ajustes:
+            assert causa in causas_base, (
+                f"Regressão detectada: O modificador '{cenario}' referencia a causa órfã '{causa}' "
+                f"que não existe na TABELA_PROBABILIDADES_BASE."
+            )
+            assert incremento > 0.0, f"O incremento do modificador '{cenario}' deve ser positivo."
 
 
 def test_contexto_aumenta_probabilidade_esperada(motor, contexto_vazio):
@@ -154,7 +156,7 @@ def test_validacao_modulo_rejeita_causa_orfa():
     """Valida se a função de validação no import levanta AssertionError se uma causa for órfã."""
     copia_modificadores = MotorCausaRaiz.MODIFICADORES.copy()
     try:
-        MotorCausaRaiz.MODIFICADORES["cenario_teste_invalido"] = ("Causa Totalmente Inexistente", 0.5)
+        MotorCausaRaiz.MODIFICADORES["cenario_teste_invalido"] = [("Causa Totalmente Inexistente", 0.5)]
         with pytest.raises(AssertionError) as excinfo:
             _validar_consistencia_modificadores()
         assert "Causa órfã detectada" in str(excinfo.value)

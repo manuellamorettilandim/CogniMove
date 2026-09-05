@@ -61,12 +61,12 @@ class MotorCausaRaiz:
     # Cada modificador indica: (causa_afetada, incremento_absoluto)
     # Após aplicar, todas as probabilidades são renormalizadas para somar 1.0.
 
-    MODIFICADORES: dict[str, tuple[str, float]] = {
-        "chuva_forte":   (Causa.SINALIZACAO_POUCO_VISIVEL.value, 0.25),
-        "horario_pico":  (Causa.CONGESTIONAMENTO.value,          0.20),
-        "obra_viaria":   (Causa.SINALIZACAO_POUCO_VISIVEL.value, 0.15),
-        "dia_jogo":      (Causa.CONGESTIONAMENTO.value,          0.15),
-        "feriado":       (Causa.CONDUTA_DO_CONDUTOR.value,       0.10),
+    MODIFICADORES: dict[str, list[tuple[str, float]]] = {
+        "chuva_forte":   [(Causa.SINALIZACAO_POUCO_VISIVEL.value, 0.25)],
+        "horario_pico":  [(Causa.CONGESTIONAMENTO.value,          0.20)],
+        "obra_viaria":   [(Causa.SINALIZACAO_POUCO_VISIVEL.value, 0.15)],
+        "dia_jogo":      [(Causa.CONGESTIONAMENTO.value,          0.15)],
+        "feriado":       [(Causa.CONDUTA_DO_CONDUTOR.value,       0.10)],
     }
 
     # ── API pública ───────────────────────────────────────────────────────────
@@ -106,9 +106,10 @@ class MotorCausaRaiz:
         probs = copy.deepcopy(base)
 
         # Aplicar modificadores dos cenários ativos
-        for chave_contexto, (causa, incremento) in self.MODIFICADORES.items():
+        for chave_contexto, ajustes in self.MODIFICADORES.items():
             if contexto.get(chave_contexto, False):
-                probs[causa] = probs.get(causa, 0.0) + incremento
+                for causa, incremento in ajustes:
+                    probs[causa] = probs.get(causa, 0.0) + incremento
 
         # Normalizar para somar 1.0
         probs = self._normalizar(probs)
@@ -149,12 +150,13 @@ def _validar_consistencia_modificadores() -> None:
         for sub_tabela in MotorCausaRaiz.TABELA_PROBABILIDADES_BASE.values()
         for causa in sub_tabela.keys()
     }
-    for cenario, (causa, _) in MotorCausaRaiz.MODIFICADORES.items():
-        if causa not in causas_base:
-            raise AssertionError(
-                f"Causa órfã detectada no modificador '{cenario}': '{causa}' "
-                f"não existe em nenhuma entrada de TABELA_PROBABILIDADES_BASE."
-            )
+    for cenario, ajustes in MotorCausaRaiz.MODIFICADORES.items():
+        for causa, _ in ajustes:
+            if causa not in causas_base:
+                raise AssertionError(
+                    f"Causa órfã detectada no modificador '{cenario}': '{causa}' "
+                    f"não existe em nenhuma entrada de TABELA_PROBABILIDADES_BASE."
+                )
 
 
 # Validação executada na inicialização do módulo
