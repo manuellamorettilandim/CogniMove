@@ -1,33 +1,25 @@
 # Configurações locais / Chaves de API
 .env
 
-# Pesos do YOLOv8 (mantém o modelo treinado best.pt no repositório)
+# Pesos do YOLOv8 (Modelo final best.pt incluído)
 *.pt
 !backend/models/best.pt
-!backend/models/yolov8n.pt
+backend/outputs/runs/
 
-# Saídas geradas em tempo de execução
-backend/outputs/
-
-# Datasets pesados (imagens e txts de treino)
+# Datasets e saídas de execução (arquivos pesados)
 backend/training/datasets/
+backend/outputs/
 
 # Arquivos de mídia pesados
 *.mp4
 *.avi
 *.mov
 *.mkv
-*.jpg
-*.jpeg
-*.png
-*.zip
 
 # Python caches
 __pycache__/
 *.py[cod]
 *$py.class
-.DS_Store
-Thumbs.db
 
 # Node / Frontend
 node_modules/
