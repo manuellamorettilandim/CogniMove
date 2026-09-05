@@ -11,6 +11,7 @@ import pytest
 from backend.analytics.causa_raiz import (
     Causa,
     MotorCausaRaiz,
+    validar_tabela_base,
     _validar_consistencia_modificadores,
 )
 from backend.analytics.contexto_urbano import GerenciadorContextoUrbano
@@ -24,6 +25,27 @@ def motor():
 @pytest.fixture
 def contexto_vazio():
     return GerenciadorContextoUrbano().obter_contexto_atual()
+
+
+def test_tabela_base_soma_um():
+    """Valida diretamente que os pesos brutos em TABELA_PROBABILIDADES_BASE somam 1.0."""
+    validar_tabela_base()
+
+
+def test_tabela_base_soma_incorreta_rejeitada():
+    """Valida se validar_tabela_base levanta AssertionError caso uma soma seja diferente de 1.0."""
+    original = MotorCausaRaiz.TABELA_PROBABILIDADES_BASE.copy()
+    try:
+        # Clona o dicionário interno para injetar erro sem poluir outras entradas
+        MotorCausaRaiz.TABELA_PROBABILIDADES_BASE = {
+            k: v.copy() for k, v in original.items()
+        }
+        MotorCausaRaiz.TABELA_PROBABILIDADES_BASE["AVANCO_SINAL_VERMELHO"][Causa.CONGESTIONAMENTO.value] = 0.99
+        with pytest.raises(AssertionError) as excinfo:
+            validar_tabela_base()
+        assert "TABELA_PROBABILIDADES_BASE['AVANCO_SINAL_VERMELHO'] soma" in str(excinfo.value)
+    finally:
+        MotorCausaRaiz.TABELA_PROBABILIDADES_BASE = original
 
 
 def test_distribuicao_soma_um(motor, contexto_vazio):

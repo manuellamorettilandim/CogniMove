@@ -141,6 +141,22 @@ class MotorCausaRaiz:
         return f"<MotorCausaRaiz tipos={tipos}>"
 
 
+def validar_tabela_base() -> None:
+    """Valida se a soma das probabilidades base para cada tipo de infração é exatamente 1.0.
+
+    Decisão de design:
+    Esta validação é acionada primariamente dentro da suíte de testes automatizados
+    (CI/CD e pytest) para não impactar o tempo de importação em produção, mantendo
+    a integridade dos dados garantida antes de qualquer deploy.
+    """
+    for tipo, causas in MotorCausaRaiz.TABELA_PROBABILIDADES_BASE.items():
+        soma = sum(causas.values())
+        if abs(soma - 1.0) >= 1e-9:
+            raise AssertionError(
+                f"TABELA_PROBABILIDADES_BASE[{tipo!r}] soma {soma}, esperado 1.0"
+            )
+
+
 def _validar_consistencia_modificadores() -> None:
     """Garante que toda causa referenciada em MODIFICADORES existe em pelo menos
     uma entrada de TABELA_PROBABILIDADES_BASE.
@@ -161,3 +177,4 @@ def _validar_consistencia_modificadores() -> None:
 
 # Validação executada na inicialização do módulo
 _validar_consistencia_modificadores()
+
