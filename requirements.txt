@@ -1,0 +1,13 @@
+# CogniMove — Dependências Python
+# Instalar com: pip install -r requirements.txt
+
+# ── Visão computacional e IA ──────────────────────────────────
+ultralytics>=8.0.0          # YOLOv8 + ByteTrack (rastreamento incluído)
+opencv-python>=4.8.0        # Processamento de vídeo e imagem
+numpy>=1.24.0               # Operações matriciais
+
+# ── Dashboard web ─────────────────────────────────────────────
+flask>=3.0.0                # Servidor web + streaming MJPEG + SSE
+
+# ── Utilitários ───────────────────────────────────────────────
+python-dotenv>=1.0.0        # Leitura do .env (chaves de API)

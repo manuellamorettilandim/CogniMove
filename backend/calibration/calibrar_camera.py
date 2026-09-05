@@ -1,0 +1,252 @@
+#!/usr/bin/env python3
+"""
+CogniMove — Ferramenta de Calibração Interativa de Câmera
+Clique nos pontos do frame para definir linhas e zonas, depois salve o preset.
+
+Controles:
+  L  — modo Linha (stop line / limite)
+  P  — modo Polígono (bike box / faixa)
+  I  — modo Interseção (cruzamento)
+  Z  — desfazer último ponto
+  C  — limpar seleção atual
+  S  — salvar preset e sair
+  Q  — sair sem salvar
+"""
+import os, sys, cv2, json, argparse
+from pathlib import Path
+
+_HERE    = Path(__file__).resolve().parent
+_BACKEND = _HERE.parent
+_ROOT    = _BACKEND.parent
+
+COLORS = {
+    "line":         (0,   255, 255),
+    "polygon":      (255, 200,   0),
+    "intersection": (0,   100, 255),
+}
+
+MODES = ["line", "polygon", "intersection"]
+MODE_LABELS = {
+    "line":         "L — LINHA DE RETENCAO/LIMITE",
+    "polygon":      "P — POLIGONO (bike box / faixa)",
+    "intersection": "I — ZONA DE CRUZAMENTO",
+}
+
+
+class CalibradorCamera:
+    def __init__(self, source, preset_name: str, output_dir: Path):
+        self.source      = source
+        self.preset_name = preset_name
+        self.output_dir  = output_dir
+
+        self.lines:         list[list] = []   # cada item: lista de 2 pontos
+        self.polygons:      list[list] = []   # cada item: lista de N pontos
+        self.intersections: list[list] = []   # cada item: lista de N pontos
+
+        self.mode         = "line"
+        self.current_pts: list        = []
+        self.frame_orig   = None
+        self.wname        = "CogniMove — Calibracao de Camera"
+
+    # ── Captura do frame de referência ───────────────────────────────────────
+
+    def _grab_frame(self):
+        src = self.source
+        try:
+            src = int(src)
+        except (ValueError, TypeError):
+            pass
+        cap = cv2.VideoCapture(src)
+        if not cap.isOpened():
+            print(f"[Erro] Não foi possível abrir: {self.source}")
+            sys.exit(1)
+        # Pular para 10% da duração (mais representativo que frame 0)
+        total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        if total > 10:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, total // 10)
+        ret, frame = cap.read()
+        cap.release()
+        if not ret:
+            print("[Erro] Não foi possível ler frame.")
+            sys.exit(1)
+        return frame
+
+    # ── Callback do mouse ─────────────────────────────────────────────────────
+
+    def _on_mouse(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            self.current_pts.append([x, y])
+            # Linha: completa com 2 pontos
+            if self.mode == "line" and len(self.current_pts) == 2:
+                self.lines.append(list(self.current_pts))
+                print(f"  [+] Linha adicionada: {self.current_pts}")
+                self.current_pts = []
+        elif event == cv2.EVENT_RBUTTONDOWN:
+            # Clique direito: fechar polígono/interseção
+            if self.mode == "polygon" and len(self.current_pts) >= 3:
+                self.polygons.append(list(self.current_pts))
+                print(f"  [+] Polígono ({len(self.current_pts)} pts) adicionado.")
+                self.current_pts = []
+            elif self.mode == "intersection" and len(self.current_pts) >= 3:
+                self.intersections.append(list(self.current_pts))
+                print(f"  [+] Zona de cruzamento ({len(self.current_pts)} pts) adicionada.")
+                self.current_pts = []
+
+    # ── Renderização ──────────────────────────────────────────────────────────
+
+    def _render(self, frame):
+        import numpy as np
+        disp = frame.copy()
+
+        # Linhas salvas
+        for pts in self.lines:
+            cv2.line(disp, tuple(pts[0]), tuple(pts[1]), COLORS["line"], 2)
+            cv2.circle(disp, tuple(pts[0]), 5, COLORS["line"], -1)
+            cv2.circle(disp, tuple(pts[1]), 5, COLORS["line"], -1)
+
+        # Polígonos salvos
+        for pts in self.polygons:
+            poly = np.array(pts, np.int32)
+            cv2.polylines(disp, [poly.reshape(-1,1,2)], True, COLORS["polygon"], 2)
+            for p in pts:
+                cv2.circle(disp, tuple(p), 4, COLORS["polygon"], -1)
+
+        # Interseções salvas
+        for pts in self.intersections:
+            poly = np.array(pts, np.int32)
+            cv2.polylines(disp, [poly.reshape(-1,1,2)], True, COLORS["intersection"], 2)
+            for p in pts:
+                cv2.circle(disp, tuple(p), 4, COLORS["intersection"], -1)
+
+        # Pontos correntes
+        cur_color = COLORS[self.mode]
+        for p in self.current_pts:
+            cv2.circle(disp, tuple(p), 5, cur_color, -1)
+        if len(self.current_pts) >= 2:
+            import numpy as np
+            pts_np = np.array(self.current_pts, np.int32)
+            cv2.polylines(disp, [pts_np.reshape(-1,1,2)], False, cur_color, 1)
+
+        # HUD
+        h, w = disp.shape[:2]
+        cv2.rectangle(disp, (0,0),(w,54),(10,10,10),-1)
+        mode_lbl = MODE_LABELS.get(self.mode,"")
+        cv2.putText(disp,f"MODO: {mode_lbl}",(8,20),
+                    cv2.FONT_HERSHEY_SIMPLEX,0.52,cur_color,1,cv2.LINE_AA)
+        cv2.putText(disp,
+                    f"Linhas:{len(self.lines)}  Poligonos:{len(self.polygons)}  "
+                    f"Cruzamentos:{len(self.intersections)}  "
+                    f"Pts atuais:{len(self.current_pts)}  "
+                    f"[L/P/I=modo  Z=desfazer  C=limpar  S=salvar  Q=sair]",
+                    (8,42),cv2.FONT_HERSHEY_SIMPLEX,0.36,(180,180,180),1,cv2.LINE_AA)
+        return disp
+
+    # ── Salvar preset ────────────────────────────────────────────────────────
+
+    def _save(self, width: int, height: int):
+        preset = {
+            "name":        self.preset_name,
+            "ref_width":   width,
+            "ref_height":  height,
+            "lines": [
+                {"name": f"Linha {i+1}", "pt1": pts[0], "pt2": pts[1],
+                 "color": [0,255,255]}
+                for i, pts in enumerate(self.lines)
+            ],
+            "stop_lines": [
+                {"name": f"Retencao {i+1}", "pt1": pts[0], "pt2": pts[1],
+                 "color": [0,255,255]}
+                for i, pts in enumerate(self.lines)
+            ],
+            "polygons": [
+                {"name": f"Area {i+1}", "type": "bike_box", "points": pts}
+                for i, pts in enumerate(self.polygons)
+            ],
+            "intersection_polygons": [
+                {"name": f"Cruzamento {i+1}", "type": "intersection", "points": pts}
+                for i, pts in enumerate(self.intersections)
+            ],
+        }
+        out_path = self.output_dir / f"{self.preset_name}.json"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(preset, f, ensure_ascii=False, indent=2)
+        print(f"\n[Salvo] Preset '{self.preset_name}' em: {out_path}")
+        return out_path
+
+    # ── Loop principal ────────────────────────────────────────────────────────
+
+    def run(self):
+        print("\n=== CogniMove — Calibração de Câmera ===")
+        print("  L = linha de retenção  |  P = polígono  |  I = interseção")
+        print("  Clique esquerdo = adicionar ponto")
+        print("  Clique direito  = fechar polígono/interseção")
+        print("  Z = desfazer  |  C = limpar  |  S = salvar  |  Q = sair")
+
+        frame = self._grab_frame()
+        h, w  = frame.shape[:2]
+        print(f"[Info] Resolução: {w}x{h}")
+
+        cv2.namedWindow(self.wname, cv2.WINDOW_NORMAL)
+        cv2.setMouseCallback(self.wname, self._on_mouse)
+
+        while True:
+            disp = self._render(frame)
+            cv2.imshow(self.wname, disp)
+            key = cv2.waitKey(30) & 0xFF
+
+            if key == ord("l"):
+                self.mode = "line";         self.current_pts = []
+                print("[Modo] Linha de retenção/limite")
+            elif key == ord("p"):
+                self.mode = "polygon";      self.current_pts = []
+                print("[Modo] Polígono (bike box / faixa)")
+            elif key == ord("i"):
+                self.mode = "intersection"; self.current_pts = []
+                print("[Modo] Zona de cruzamento")
+            elif key == ord("z") and self.current_pts:
+                removed = self.current_pts.pop()
+                print(f"  [-] Ponto removido: {removed}")
+            elif key == ord("c"):
+                self.current_pts = []
+                print("  [C] Pontos correntes limpos")
+            elif key == ord("s"):
+                path = self._save(w, h)
+                print(f"[OK] Preset salvo. Use --preset {self.preset_name} ao monitorar.")
+                break
+            elif key in (ord("q"), 27):
+                print("[Q] Saindo sem salvar.")
+                break
+
+        cv2.destroyAllWindows()
+
+
+def main():
+    p = argparse.ArgumentParser(description="Calibração interativa de câmera — CogniMove")
+    p.add_argument("--source",  "-s", default=None,
+                   help="Fonte de vídeo (0, rtsp://, arquivo)")
+    p.add_argument("--preset",  "-p", default="minha_camera",
+                   help="Nome do preset a salvar (sem .json)")
+    args = p.parse_args()
+
+    source = args.source
+    if source is None:
+        # Busca automática
+        import glob as _glob
+        videos = list((_ROOT / "videos_teste").glob("*.mp4")) + \
+                 list((_ROOT / "videos_originais").glob("*.mp4"))
+        if videos:
+            videos.sort(key=lambda f: f.stat().st_mtime, reverse=True)
+            source = str(videos[0])
+            print(f"[Auto] Usando: {source}")
+        else:
+            source = "0"
+            print("[Auto] Nenhum vídeo encontrado, usando webcam 0")
+
+    out_dir = _ROOT / "backend" / "calibration" / "presets"
+    cal = CalibradorCamera(source, args.preset, out_dir)
+    cal.run()
+
+
+if __name__ == "__main__":
+    main()

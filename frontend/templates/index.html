@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CogniMove — Monitor de Infrações</title>
+  <meta name="description" content="Dashboard em tempo real para detecção de infrações de trânsito — CogniMove"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+</head>
+<body>
+
+<!-- ── NAVBAR ─────────────────────────────────────────────────────────────── -->
+<header class="navbar" id="navbar">
+  <div class="navbar__logo">
+    <div class="logo-dot"></div>
+    <span class="logo-text">Cogni<span class="logo-accent">Move</span></span>
+    <span class="logo-badge">MONITOR DE INFRAÇÕES</span>
+  </div>
+  <div class="navbar__controls">
+    <div class="status-pill" id="status-pill">
+      <span class="status-dot" id="status-dot"></span>
+      <span id="status-text">Desconectado</span>
+    </div>
+    <button class="btn btn--primary" id="btn-start" onclick="startDetector()">
+      ▶ Iniciar
+    </button>
+    <button class="btn btn--danger" id="btn-stop" onclick="stopDetector()" disabled>
+      ■ Parar
+    </button>
+    <button class="btn btn--outline" onclick="exportCSV()">
+      ↓ Exportar CSV
+    </button>
+  </div>
+</header>
+
+<!-- ── MODAL DE CONFIGURAÇÃO ──────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" role="dialog" aria-labelledby="modal-title">
+    <h2 id="modal-title" class="modal__title">Configurar Monitoramento</h2>
+    <div class="form-group">
+      <label for="cfg-source-select">Escolher Vídeo ou Câmera</label>
+      <select id="cfg-source-select" onchange="toggleCustomSourceInput()">
+        <option value="videos_teste/video_teste.mp4">🎥 video_teste.mp4 (Vídeo 1)</option>
+        <option value="videos_teste/video_teste2.mp4">🎥 video_teste2.mp4 (Vídeo 2)</option>
+        <option value="videos_teste/video_teste3.mp4">🎥 video_teste3.mp4 (Vídeo 3)</option>
+        <option value="videos_teste/video_teste4.mp4">🎥 video_teste4.mp4 (Vídeo 4)</option>
+        <option value="0">📹 Webcam ao Vivo (0)</option>
+        <option value="custom">⚙️ Outro (Caminho ou URL RTSP)</option>
+      </select>
+    </div>
+    <div class="form-group" id="group-source-custom" style="display: none;">
+      <label for="cfg-source-custom">Caminho Personalizado / URL RTSP</label>
+      <input id="cfg-source-custom" type="text" placeholder="ex: rtsp://192.168.1.10/stream ou C:\video.mp4"/>
+    </div>
+    <div class="form-group">
+      <label for="cfg-preset">Preset de Câmera</label>
+      <select id="cfg-preset">
+        <option value="general">general (padrão)</option>
+        <option value="caetano_alvares">caetano_alvares</option>
+        <option value="maria_paula">maria_paula</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="cfg-camera">Nome da Câmera</label>
+      <input id="cfg-camera" type="text" placeholder="Camera 1" value="Camera 1"/>
+    </div>
+    <div class="modal__actions">
+      <button class="btn btn--outline" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn--primary" onclick="confirmStart()">▶ Iniciar Monitoramento</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MAIN LAYOUT ─────────────────────────────────────────────────────────── -->
+<main class="layout" id="main-layout">
+
+  <!-- COLUNA ESQUERDA: vídeo -->
+  <section class="panel panel--video" id="video-panel">
+    <div class="panel__header">
+      <span class="panel__title">Feed ao Vivo</span>
+      <div class="live-badge" id="live-badge">
+        <span class="live-dot"></span> LIVE
+      </div>
+    </div>
+    <div class="video-container" id="video-container">
+      <div class="video-placeholder" id="video-placeholder">
+        <div class="placeholder-icon">📷</div>
+        <p>Aguardando início do monitoramento…</p>
+        <button class="btn btn--primary btn--lg" onclick="startDetector()">
+          ▶ Iniciar Monitoramento
+        </button>
+      </div>
+      <img id="video-feed" src="" alt="Feed de vídeo ao vivo" class="video-feed hidden"/>
+    </div>
+    <!-- Semáforo overlay -->
+    <div class="light-indicator" id="light-indicator" title="Estado do semáforo">
+      <div class="light-bulb" id="light-red"></div>
+      <div class="light-bulb" id="light-yellow"></div>
+      <div class="light-bulb" id="light-green"></div>
+    </div>
+  </section>
+
+  <!-- COLUNA DIREITA: stats + log -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Cartões de estatísticas -->
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card stat-card--total">
+        <div class="stat-card__icon">⚠</div>
+        <div class="stat-card__value" id="stat-total">0</div>
+        <div class="stat-card__label">Total de Infrações</div>
+      </div>
+      <div class="stat-card stat-card--red">
+        <div class="stat-card__icon">🚦</div>
+        <div class="stat-card__value" id="stat-sinal">0</div>
+        <div class="stat-card__label">Avanço de Sinal</div>
+      </div>
+      <div class="stat-card stat-card--amber">
+        <div class="stat-card__icon">🚷</div>
+        <div class="stat-card__value" id="stat-faixa">0</div>
+        <div class="stat-card__label">Invasão de Faixa</div>
+      </div>
+      <div class="stat-card stat-card--blue">
+        <div class="stat-card__icon">🚧</div>
+        <div class="stat-card__value" id="stat-bloq">0</div>
+        <div class="stat-card__label">Bloqueio Cruzam.</div>
+      </div>
+    </div>
+
+    <!-- Log de infrações -->
+    <div class="panel panel--log" id="log-panel">
+      <div class="panel__header">
+        <span class="panel__title">Infrações Detectadas</span>
+        <button class="btn btn--ghost btn--sm" onclick="clearLog()">Limpar</button>
+      </div>
+      <div class="log-list" id="log-list">
+        <div class="log-empty" id="log-empty">
+          Nenhuma infração detectada ainda
+        </div>
+      </div>
+    </div>
+
+  </aside>
+</main>
+
+<!-- ── TOAST NOTIFICATIONS ─────────────────────────────────────────────────── -->
+<div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+<script src="/static/js/dashboard.js"></script>
+</body>
+</html>

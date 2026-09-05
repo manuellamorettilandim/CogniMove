@@ -1,0 +1,11 @@
+path: C:\Users\25011962\ONEDRI~1\COGNIM~1\codigos\DATASE~1
+train: train/images
+val: valid/images
+test: test/images
+
+names:
+  0: Limite
+  1: Faixa_Pedestre
+  2: Semaforo
+
+nc: 3

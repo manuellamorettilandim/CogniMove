@@ -1,0 +1,18 @@
+{
+  "name": "caetano_alvares",
+  "description": "Av. Caetano Alvares / Casa Verde — bike box + 3 linhas de limite",
+  "ref_width":  352,
+  "ref_height": 240,
+  "lines": [
+    {"name": "Limite Veicular",     "pt1": [20,  150], "pt2": [145, 220], "color": [0, 255, 255]},
+    {"name": "Limite Ciclista",     "pt1": [75,  105], "pt2": [185, 172], "color": [255, 255, 0]},
+    {"name": "Limite Faixa Direita","pt1": [275, 150], "pt2": [330, 168], "color": [0, 255, 255]}
+  ],
+  "stop_lines": [
+    {"name": "Retencao Veicular",   "pt1": [20,  150], "pt2": [145, 220], "color": [0, 255, 255]},
+    {"name": "Retencao Ciclista",   "pt1": [75,  105], "pt2": [185, 172], "color": [255, 255, 0]},
+    {"name": "Retencao Dir.",       "pt1": [275, 150], "pt2": [330, 168], "color": [0, 255, 255]}
+  ],
+  "polygons": [],
+  "intersection_polygons": []
+}

@@ -1,0 +1,16 @@
+{
+  "name": "maria_paula",
+  "description": "Av. Maria Paula / Santo Amaro — câmera com duas pistas",
+  "ref_width":  480,
+  "ref_height": 270,
+  "lines": [
+    {"name": "Limite Pista Esq.",  "pt1": [30,  205], "pt2": [180, 205], "color": [0,255,255]},
+    {"name": "Limite Pista Dir.",  "pt1": [260, 190], "pt2": [380, 190], "color": [0,255,255]}
+  ],
+  "stop_lines": [
+    {"name": "Retenção Esq.",  "pt1": [30,  205], "pt2": [180, 205], "color": [0,255,255]},
+    {"name": "Retenção Dir.",  "pt1": [260, 190], "pt2": [380, 190], "color": [0,255,255]}
+  ],
+  "polygons": [],
+  "intersection_polygons": []
+}
