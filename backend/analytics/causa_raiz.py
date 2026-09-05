@@ -11,6 +11,17 @@ Baseado na Tabela 1 e Seção 4.2 do artigo:
 from __future__ import annotations
 
 import copy
+from enum import Enum
+
+
+class Causa(str, Enum):
+    """Constantes para as causas-raiz catalogadas no sistema."""
+    TEMPO_SEMAFORICO_INADEQUADO = "Tempo semafórico inadequado"
+    CONGESTIONAMENTO = "Congestionamento"
+    CONDUTA_DO_CONDUTOR = "Conduta do condutor"
+    SINALIZACAO_POUCO_VISIVEL = "Sinalização pouco visível"
+    PINTURA_DESGASTADA_AUSENTE = "Pintura desgastada / ausente"
+    AUSENCIA_DE_SEGREGADOR_FISICO = "Ausência de segregador físico"
 
 
 class MotorCausaRaiz:
@@ -24,22 +35,22 @@ class MotorCausaRaiz:
 
     TABELA_PROBABILIDADES_BASE: dict[str, dict[str, float]] = {
         "AVANCO_SINAL_VERMELHO": {
-            "Tempo semafórico inadequado":     0.35,
-            "Congestionamento":                0.25,
-            "Conduta do condutor":             0.25,
-            "Sinalização pouco visível":       0.15,
+            Causa.TEMPO_SEMAFORICO_INADEQUADO.value: 0.35,
+            Causa.CONGESTIONAMENTO.value:            0.25,
+            Causa.CONDUTA_DO_CONDUTOR.value:         0.25,
+            Causa.SINALIZACAO_POUCO_VISIVEL.value:   0.15,
         },
         "INVASAO_FAIXA": {
-            "Pintura desgastada / ausente":    0.35,
-            "Sinalização pouco visível":       0.25,
-            "Ausência de segregador físico":   0.20,
-            "Conduta do condutor":             0.20,
+            Causa.PINTURA_DESGASTADA_AUSENTE.value:  0.35,
+            Causa.SINALIZACAO_POUCO_VISIVEL.value:   0.25,
+            Causa.AUSENCIA_DE_SEGREGADOR_FISICO.value: 0.20,
+            Causa.CONDUTA_DO_CONDUTOR.value:         0.20,
         },
         "BLOQUEIO_CRUZAMENTO": {
-            "Congestionamento":                0.45,
-            "Tempo semafórico inadequado":     0.25,
-            "Conduta do condutor":             0.20,
-            "Sinalização pouco visível":       0.10,
+            Causa.CONGESTIONAMENTO.value:            0.45,
+            Causa.TEMPO_SEMAFORICO_INADEQUADO.value: 0.25,
+            Causa.CONDUTA_DO_CONDUTOR.value:         0.20,
+            Causa.SINALIZACAO_POUCO_VISIVEL.value:   0.10,
         },
     }
 
@@ -48,11 +59,11 @@ class MotorCausaRaiz:
     # Após aplicar, todas as probabilidades são renormalizadas para somar 1.0.
 
     MODIFICADORES: dict[str, tuple[str, float]] = {
-        "chuva_forte":   ("Baixa visibilidade",           0.25),
-        "horario_pico":  ("Congestionamento",              0.20),
-        "obra_viaria":   ("Sinalização pouco visível",     0.15),
-        "dia_jogo":      ("Congestionamento",              0.15),
-        "feriado":       ("Conduta do condutor",            0.10),
+        "chuva_forte":   (Causa.SINALIZACAO_POUCO_VISIVEL.value, 0.25),
+        "horario_pico":  (Causa.CONGESTIONAMENTO.value,          0.20),
+        "obra_viaria":   (Causa.SINALIZACAO_POUCO_VISIVEL.value, 0.15),
+        "dia_jogo":      (Causa.CONGESTIONAMENTO.value,          0.15),
+        "feriado":       (Causa.CONDUTA_DO_CONDUTOR.value,       0.10),
     }
 
     # ── API pública ───────────────────────────────────────────────────────────
@@ -119,3 +130,24 @@ class MotorCausaRaiz:
     def __repr__(self) -> str:
         tipos = list(self.TABELA_PROBABILIDADES_BASE.keys())
         return f"<MotorCausaRaiz tipos={tipos}>"
+
+
+def _validar_consistencia_modificadores() -> None:
+    """Garante que toda causa referenciada em MODIFICADORES existe em pelo menos
+    uma entrada de TABELA_PROBABILIDADES_BASE.
+    """
+    causas_base: set[str] = {
+        causa
+        for sub_tabela in MotorCausaRaiz.TABELA_PROBABILIDADES_BASE.values()
+        for causa in sub_tabela.keys()
+    }
+    for cenario, (causa, _) in MotorCausaRaiz.MODIFICADORES.items():
+        if causa not in causas_base:
+            raise AssertionError(
+                f"Causa órfã detectada no modificador '{cenario}': '{causa}' "
+                f"não existe em nenhuma entrada de TABELA_PROBABILIDADES_BASE."
+            )
+
+
+# Validação executada na inicialização do módulo
+_validar_consistencia_modificadores()
