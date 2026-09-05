@@ -22,17 +22,28 @@ class GerenciadorContextoUrbano:
     acessar/modificar simultaneamente.
     """
 
+    # Mapeamento de nomes legíveis para relatórios e UI
+    NOMES_FATORES: dict[str, str] = {
+        "chuva_forte":  "Chuva Forte / Baixa Visibilidade",
+        "dia_jogo":     "Dia de Jogo / Evento de Grande Porte",
+        "horario_pico": "Horário de Pico",
+        "feriado":      "Feriado",
+        "obra_viaria":  "Obra Viária / Desvio",
+    }
+
     # ── Construtor ────────────────────────────────────────────────────────────
 
     def __init__(self):
         self._lock = threading.Lock()
 
-        # Cenários simuláveis (todos inativos por padrão)
-        self._chuva_forte: bool = False
-        self._dia_jogo: bool = False
-        self._horario_pico: bool = False
-        self._feriado: bool = False
-        self._obra_viaria: bool = False
+        # Cenários simuláveis armazenados em dicionário unificado
+        self._flags: dict[str, bool] = {
+            "chuva_forte": False,
+            "dia_jogo": False,
+            "horario_pico": False,
+            "feriado": False,
+            "obra_viaria": False,
+        }
 
     # ── Getters de estado ─────────────────────────────────────────────────────
 
@@ -45,48 +56,48 @@ class GerenciadorContextoUrbano:
         """
         with self._lock:
             ctx = {
-                "chuva_forte":   self._chuva_forte,
-                "dia_jogo":      self._dia_jogo,
-                "horario_pico":  self._horario_pico,
-                "feriado":       self._feriado,
-                "obra_viaria":   self._obra_viaria,
-                "timestamp":     datetime.datetime.now().isoformat(),
+                **self._flags,
+                "timestamp": datetime.datetime.now().isoformat(),
             }
 
-        # Lista legível dos fatores ativos (útil para relatórios)
-        _nomes = {
-            "chuva_forte":  "Chuva Forte / Baixa Visibilidade",
-            "dia_jogo":     "Dia de Jogo / Evento de Grande Porte",
-            "horario_pico": "Horário de Pico",
-            "feriado":      "Feriado",
-            "obra_viaria":  "Obra Viária / Desvio",
-        }
         ctx["fatores_ativos"] = [
-            _nomes[k] for k in _nomes if ctx.get(k)
+            self.NOMES_FATORES[k] for k in self.NOMES_FATORES if ctx.get(k)
         ]
         return ctx
 
-    # ── Setters individuais ───────────────────────────────────────────────────
+    # ── Setter genérico ───────────────────────────────────────────────────────
+
+    def set_flag(self, nome: str, estado: bool) -> None:
+        """Define o estado de um cenário urbano por chave.
+
+        Args:
+            nome: Nome da flag (ex: 'chuva_forte', 'horario_pico').
+            estado: Booleano indicando se o cenário está ativo.
+
+        Raises:
+            KeyError: Se o nome do cenário não existir em self._flags.
+        """
+        if nome not in self._flags:
+            raise KeyError(f"Cenário urbano desconhecido: {nome!r}")
+        with self._lock:
+            self._flags[nome] = bool(estado)
+
+    # ── Setters individuais (delegam para set_flag) ───────────────────────────
 
     def set_chuva_forte(self, estado: bool) -> None:
-        with self._lock:
-            self._chuva_forte = estado
+        self.set_flag("chuva_forte", estado)
 
     def set_dia_jogo(self, estado: bool) -> None:
-        with self._lock:
-            self._dia_jogo = estado
+        self.set_flag("dia_jogo", estado)
 
     def set_horario_pico(self, estado: bool) -> None:
-        with self._lock:
-            self._horario_pico = estado
+        self.set_flag("horario_pico", estado)
 
     def set_feriado(self, estado: bool) -> None:
-        with self._lock:
-            self._feriado = estado
+        self.set_flag("feriado", estado)
 
     def set_obra_viaria(self, estado: bool) -> None:
-        with self._lock:
-            self._obra_viaria = estado
+        self.set_flag("obra_viaria", estado)
 
     # ── Setter em lote (usado pelo Streamlit) ─────────────────────────────────
 
@@ -98,13 +109,13 @@ class GerenciadorContextoUrbano:
         feriado: bool = False,
         obra_viaria: bool = False,
     ) -> None:
-        """Atualiza todos os cenários de uma vez."""
+        """Atualiza todos os cenários de uma vez de forma atômica."""
         with self._lock:
-            self._chuva_forte  = chuva_forte
-            self._dia_jogo     = dia_jogo
-            self._horario_pico = horario_pico
-            self._feriado      = feriado
-            self._obra_viaria  = obra_viaria
+            self._flags["chuva_forte"]  = bool(chuva_forte)
+            self._flags["dia_jogo"]     = bool(dia_jogo)
+            self._flags["horario_pico"] = bool(horario_pico)
+            self._flags["feriado"]      = bool(feriado)
+            self._flags["obra_viaria"]  = bool(obra_viaria)
 
     # ── Representação ─────────────────────────────────────────────────────────
 

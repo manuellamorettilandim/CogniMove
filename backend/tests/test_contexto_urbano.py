@@ -66,6 +66,26 @@ def test_atualizar_contexto_em_lote():
     assert len(ctx["fatores_ativos"]) == 3
 
 
+def test_set_flag_generico():
+    """Valida o método genérico set_flag(nome, estado)."""
+    gerenciador = GerenciadorContextoUrbano()
+
+    gerenciador.set_flag("dia_jogo", True)
+    assert gerenciador.obter_contexto_atual()["dia_jogo"] is True
+
+    gerenciador.set_flag("dia_jogo", False)
+    assert gerenciador.obter_contexto_atual()["dia_jogo"] is False
+
+
+def test_set_flag_invalido_lanca_keyerror():
+    """Valida que set_flag levanta KeyError ao receber um nome de cenário desconhecido."""
+    gerenciador = GerenciadorContextoUrbano()
+    with pytest.raises(KeyError) as excinfo:
+        gerenciador.set_flag("cenario_inexistente", True)
+
+    assert "Cenário urbano desconhecido" in str(excinfo.value)
+
+
 def test_contexto_urbano_thread_safe():
     """
     (2.e) Instancia GerenciadorContextoUrbano, dispara múltiplas threads chamando
