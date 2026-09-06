@@ -10,6 +10,9 @@ _HERE = Path(__file__).resolve().parent      # detection/
 _BACKEND = _HERE.parent                      # backend/
 _DEFAULT_ROOT = _BACKEND.parent              # COGNIMOVE/
 
+PASTAS_VIDEO = ("videos_teste", "videos_originais")
+EXTENSOES_VIDEO = (".mp4", ".avi", ".mov", ".mkv")
+
 
 def resolver_fonte_video(source: str | int | float, root: Path | None = None) -> str | int:
     """Resolve a fonte de vídeo (webcam numérica, URL de stream ou arquivo local).

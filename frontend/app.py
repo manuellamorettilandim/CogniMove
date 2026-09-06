@@ -106,16 +106,17 @@ def api_status():
 
 @app.route("/api/videos")
 def api_videos():
-    """Retorna lista de vídeos disponíveis na pasta videos_teste."""
-    vt_dir = _ROOT / "videos_teste"
+    """Retorna lista de vídeos disponíveis em videos_teste/ e videos_originais/."""
     videos = []
-    if vt_dir.exists():
-        for f in sorted(vt_dir.iterdir()):
-            if f.is_file() and f.suffix.lower() in ('.mp4', '.avi', '.mkv', '.mov'):
-                videos.append({
-                    "filename": f.name,
-                    "path": f"videos_teste/{f.name}"
-                })
+    for pasta_nome in ("videos_teste", "videos_originais"):
+        pasta = _ROOT / pasta_nome
+        if pasta.exists():
+            for f in sorted(pasta.iterdir()):
+                if f.is_file() and f.suffix.lower() in ('.mp4', '.avi', '.mkv', '.mov'):
+                    videos.append({
+                        "filename": f.name,
+                        "path": f"{pasta_nome}/{f.name}"
+                    })
     return jsonify(videos)
 
 

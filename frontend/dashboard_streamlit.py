@@ -303,13 +303,18 @@ def carregar_dados() -> pd.DataFrame:
 
 
 def listar_videos() -> list[str]:
-    """Lista todos os vídeos disponíveis nas pastas de vídeo."""
+    """Lista todos os vídeos disponíveis nas pastas de vídeo.
+
+    Usa PASTAS_VIDEO de backend/detection/utils_video.py como fonte da verdade
+    para as pastas varridas, eliminando duplicação de lógica.
+    """
+    from utils_video import PASTAS_VIDEO, EXTENSOES_VIDEO
     candidatos = []
-    pastas = [_ROOT / "videos_teste", _ROOT / "videos_originais", _ROOT]
-    for p in pastas:
+    for pasta_nome in PASTAS_VIDEO:
+        p = _ROOT / pasta_nome
         if p.exists():
-            for ext in ("*.mp4", "*.avi", "*.mov", "*.mkv"):
-                candidatos.extend(p.glob(ext))
+            for ext in EXTENSOES_VIDEO:
+                candidatos.extend(p.glob(f"*{ext}"))
     return sorted(list(set(str(v) for v in candidatos)))
 
 
