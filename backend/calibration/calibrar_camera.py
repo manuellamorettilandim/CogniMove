@@ -20,6 +20,9 @@ _HERE    = Path(__file__).resolve().parent
 _BACKEND = _HERE.parent
 _ROOT    = _BACKEND.parent
 
+sys.path.insert(0, str(_BACKEND / "detection"))
+from utils_video import resolver_fonte_video
+
 COLORS = {
     "line":         (0,   255, 255),  # Ciano/Amarelo (Linha de Faixa)
     "stop_line":    (0,   0,   255),  # Vermelho (Linha de Retenção Semafórica)
@@ -55,14 +58,10 @@ class CalibradorCamera:
     # ── Captura do frame de referência ───────────────────────────────────────
 
     def _grab_frame(self):
-        src = self.source
-        try:
-            src = int(src)
-        except (ValueError, TypeError):
-            pass
+        src = resolver_fonte_video(self.source, root=_ROOT)
         cap = cv2.VideoCapture(src)
         if not cap.isOpened():
-            print(f"[Erro] Não foi possível abrir: {self.source}")
+            print(f"[Erro] Não foi possível abrir: {self.source} (resolvido como: {src})")
             sys.exit(1)
         # Pular para 10% da duração (mais representativo que frame 0)
         total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))

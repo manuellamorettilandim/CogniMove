@@ -36,6 +36,8 @@ from analytics.causa_raiz            import MotorCausaRaiz
 # Classes que o best.pt pode chamar de semáforo
 _SEMAFORO_LABELS = {"semaforo", "semáforo", "traffic_light", "trafficlight"}
 
+from utils_video import resolver_fonte_video
+
 
 # ── Utilitários de preset ─────────────────────────────────────────────────────
 
@@ -324,42 +326,9 @@ class InfracaoDetector:
     def resolver_fonte(source: str | int | float, root: Path | None = None) -> str | int:
         """Resolve a fonte de vídeo (webcam numérica, URL de stream ou arquivo local).
 
-        Ordem de busca para arquivos:
-          1. Caminho absoluto existente
-          2. Relativo à raiz do projeto (_ROOT / p)
-          3. Dentro de videos_teste/ (_ROOT / "videos_teste" / p.name)
-          4. Dentro de videos_originais/ (_ROOT / "videos_originais" / p.name)
-
-        Nota de arquitetura:
-          Esta lógica de resolução de caminhos pode ser unificada futuramente com os
-          outros pontos de uso do projeto (monitorar_infracoes.py, calibrar_camera.py,
-          teste_video.py, identificar_limite.py) através de uma função compartilhada
-          em backend/detection/utils_video.py.
+        Delega a resolução para o módulo compartilhado backend/detection/utils_video.py.
         """
-        if root is None:
-            root = _ROOT
-
-        if isinstance(source, str):
-            src_str = source.strip()
-            if src_str.isdigit():
-                return int(src_str)
-            if src_str.startswith(("rtsp://", "rtmp://", "http://", "https://")):
-                return src_str
-            p = Path(src_str)
-            if p.is_absolute() and p.exists():
-                return str(p)
-            if (root / p).exists():
-                return str(root / p)
-            if (root / "videos_teste" / p.name).exists():
-                return str(root / "videos_teste" / p.name)
-            if (root / "videos_originais" / p.name).exists():
-                return str(root / "videos_originais" / p.name)
-            return src_str
-
-        if isinstance(source, (int, float)):
-            return int(source)
-
-        return source
+        return resolver_fonte_video(source, root=root)
 
     # ── Loop principal ────────────────────────────────────────────────────────
 

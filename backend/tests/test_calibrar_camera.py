@@ -92,3 +92,53 @@ def test_save_gera_json_com_lines_e_stop_lines_distintos():
         assert dados["stop_lines"][0]["pt2"] == [300, 250]
 
         assert dados["lines"] != dados["stop_lines"]
+
+
+def test_calibrador_camera_resolve_fonte_em_videos_originais(monkeypatch):
+    """
+    (4) Confirma que CalibradorCamera consegue resolver um nome de arquivo
+    que só existe em videos_originais/ (e não em videos_teste/).
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        dir_originais = root / "videos_originais"
+        dir_teste = root / "videos_teste"
+        dir_originais.mkdir()
+        dir_teste.mkdir()
+
+        video_name = "camera_cruzamento_novo.mp4"
+        arquivo_video = dir_originais / video_name
+        arquivo_video.write_text("dummy video", encoding="utf-8")
+
+        cal = CalibradorCamera(source=video_name, preset_name="teste_resolucao", output_dir=root)
+
+        captured_source = []
+
+        class MockVideoCapture:
+            def __init__(self, src):
+                captured_source.append(src)
+
+            def isOpened(self):
+                return True
+
+            def get(self, prop):
+                return 100
+
+            def set(self, prop, val):
+                pass
+
+            def read(self):
+                import numpy as np
+                return True, np.zeros((100, 100, 3), dtype=np.uint8)
+
+            def release(self):
+                pass
+
+        monkeypatch.setattr("backend.calibration.calibrar_camera.cv2.VideoCapture", MockVideoCapture)
+        monkeypatch.setattr("backend.calibration.calibrar_camera._ROOT", root)
+
+        frame = cal._grab_frame()
+        assert frame is not None
+        assert len(captured_source) == 1
+        assert captured_source[0] == str(arquivo_video)
+
