@@ -12,7 +12,7 @@ import tempfile
 from pathlib import Path
 import pytest
 
-from backend.calibration.calibrar_camera import CalibradorCamera
+from backend.calibration.calibrar_camera import CalibradorCamera, polygon_is_self_intersecting
 
 
 def test_cliques_modo_line_alimentam_lines():
@@ -226,6 +226,44 @@ def test_remover_ultima_forma_tecla_x():
     # 3. Teste quando a lista do modo está vazia (retorna None sem exceção)
     cal.mode = "polygon"
     assert cal.remover_ultima_forma() is None
+
+
+def test_polygon_self_intersecting_detection_and_warning():
+    """
+    Valida a detecção de autointerseção em polígonos:
+    1. Polígono em formato de "8" / borboleta deve ser identificado como autointersectante (True).
+    2. Polígono simples (retângulo) NÃO deve ser identificado como autointersectante (False).
+    3. Simula fechamento de polígono em _on_mouse() e verifica o aviso visual warning_msg.
+    """
+    # 1. Polígono em "8" (autointersectante)
+    poly_figura_8 = [[0, 0], [10, 10], [0, 10], [10, 0]]
+    assert polygon_is_self_intersecting(poly_figura_8) is True
+
+    # 2. Polígono simples (retângulo não autointersectante)
+    poly_retangulo = [[0, 0], [10, 0], [10, 10], [0, 10]]
+    assert polygon_is_self_intersecting(poly_retangulo) is False
+
+    # Triângulo simples (menos de 4 pontos)
+    poly_triangulo = [[0, 0], [10, 0], [5, 10]]
+    assert polygon_is_self_intersecting(poly_triangulo) is False
+
+    # 3. Comportamento no CalibradorCamera (_on_mouse)
+    cal = CalibradorCamera(source=0, preset_name="teste_warning", output_dir=Path("/tmp"))
+    cal.mode = "polygon"
+
+    # Adiciona polígono em "8" e fecha com clique direito
+    cal.current_pts = list(poly_figura_8)
+    cal._on_mouse(cv2.EVENT_RBUTTONDOWN, 0, 0, 0, None)
+    assert len(cal.polygons) == 1
+    assert cal.warning_msg is not None
+    assert "autointersectante" in cal.warning_msg
+
+    # Adiciona polígono válido (retângulo) e fecha com clique direito -> aviso deve ser limpo
+    cal.current_pts = list(poly_retangulo)
+    cal._on_mouse(cv2.EVENT_RBUTTONDOWN, 0, 0, 0, None)
+    assert len(cal.polygons) == 2
+    assert cal.warning_msg is None
+
 
 
 

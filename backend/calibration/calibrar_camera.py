@@ -23,6 +23,33 @@ _ROOT    = _BACKEND.parent
 
 sys.path.insert(0, str(_BACKEND / "detection"))
 from utils_video import resolver_fonte_video
+from infracoes.regras.faixa_pedestre import segments_intersect
+
+
+def polygon_is_self_intersecting(points: list) -> bool:
+    """
+    Verifica se o polígono possui autointerseção (arestas não-adjacentes que se cruzam).
+
+    Args:
+        points: Lista de pontos [x, y] ou (x, y) representando os vértices do polígono.
+
+    Returns:
+        True se houver autointerseção, False caso contrário.
+    """
+    n = len(points)
+    if n < 4:
+        return False
+
+    edges = [(points[i], points[(i + 1) % n]) for i in range(n)]
+    for i in range(n):
+        for j in range(i + 1, n):
+            # Arestas adjacentes compartilham vértices: (i, i+1) ou (0, n-1)
+            if j == i + 1 or (i == 0 and j == n - 1):
+                continue
+            if segments_intersect(edges[i][0], edges[i][1], edges[j][0], edges[j][1]):
+                return True
+    return False
+
 
 COLORS = {
     "line":         (0,   255, 255),  # Ciano/Amarelo (Linha de Faixa)
@@ -54,6 +81,7 @@ class CalibradorCamera:
         self.mode         = "line"
         self.current_pts: list        = []
         self.frame_orig   = None
+        self.warning_msg: str | None  = None
         self.wname        = "CogniMove — Calibracao de Camera"
 
     # ── Captura do frame de referência ───────────────────────────────────────
@@ -93,10 +121,20 @@ class CalibradorCamera:
         elif event == cv2.EVENT_RBUTTONDOWN:
             # Clique direito: fechar polígono/interseção
             if self.mode == "polygon" and len(self.current_pts) >= 3:
+                if polygon_is_self_intersecting(self.current_pts):
+                    self.warning_msg = "Polígono pode estar autointersectante — revise os pontos."
+                    print(f"  [!] {self.warning_msg}")
+                else:
+                    self.warning_msg = None
                 self.polygons.append(list(self.current_pts))
                 print(f"  [+] Polígono ({len(self.current_pts)} pts) adicionado.")
                 self.current_pts = []
             elif self.mode == "intersection" and len(self.current_pts) >= 3:
+                if polygon_is_self_intersecting(self.current_pts):
+                    self.warning_msg = "Polígono de cruzamento pode estar autointersectante — revise os pontos."
+                    print(f"  [!] {self.warning_msg}")
+                else:
+                    self.warning_msg = None
                 self.intersections.append(list(self.current_pts))
                 print(f"  [+] Zona de cruzamento ({len(self.current_pts)} pts) adicionada.")
                 self.current_pts = []
@@ -105,6 +143,7 @@ class CalibradorCamera:
 
     def remover_ultima_forma(self) -> list | None:
         """Remove a última forma concluída da lista correspondente ao modo atual."""
+        self.warning_msg = None
         lista = {
             "line":         self.lines,
             "stop_line":    self.stop_lines,
@@ -161,7 +200,8 @@ class CalibradorCamera:
 
         # HUD
         h, w = disp.shape[:2]
-        cv2.rectangle(disp, (0,0),(w,54),(10,10,10),-1)
+        hud_h = 74 if self.warning_msg else 54
+        cv2.rectangle(disp, (0,0),(w,hud_h),(10,10,10),-1)
         mode_lbl = MODE_LABELS.get(self.mode,"")
         cv2.putText(disp,f"MODO: {mode_lbl}",(8,20),
                     cv2.FONT_HERSHEY_SIMPLEX,0.52,cur_color,1,cv2.LINE_AA)
@@ -171,6 +211,9 @@ class CalibradorCamera:
                     f"Pts atuais:{len(self.current_pts)}  "
                     f"[L/R/P/I=modo  Z=desfazer pt  X=remover forma  C=limpar  S=salvar  Q=sair]",
                     (8,42),cv2.FONT_HERSHEY_SIMPLEX,0.36,(180,180,180),1,cv2.LINE_AA)
+        if self.warning_msg:
+            cv2.putText(disp, f"[!] {self.warning_msg}", (8,62),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.38, (0,0,255), 1, cv2.LINE_AA)
         return disp
 
     # ── Salvar preset ────────────────────────────────────────────────────────
@@ -270,6 +313,7 @@ class CalibradorCamera:
                 self.remover_ultima_forma()
             elif key == ord("c"):
                 self.current_pts = []
+                self.warning_msg = None
                 print("  [C] Pontos correntes limpos")
             elif key == ord("s"):
                 path = self._save(w, h)
