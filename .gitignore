@@ -9,6 +9,7 @@ backend/outputs/runs/
 # Datasets e saídas de execução (arquivos pesados)
 backend/training/datasets/
 backend/outputs/
+backend/outputs/uploads/
 
 # Arquivos de mídia pesados
 *.mp4

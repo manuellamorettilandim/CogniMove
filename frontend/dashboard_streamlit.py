@@ -19,6 +19,7 @@ import sys
 import json
 import time
 import datetime
+import re
 from pathlib import Path
 
 import cv2
@@ -232,6 +233,24 @@ with st.sidebar:
     else:
         video_escolhido = None
         st.warning("Nenhum arquivo de vídeo encontrado.")
+
+    arquivo_enviado = st.file_uploader(
+        "Ou envie um vídeo próprio:",
+        type=["mp4", "avi", "mov", "mkv"],
+        help="Envie um vídeo do seu computador para processar com o CogniMove.",
+    )
+
+    # Manutenção futura: implementar limpeza automática de uploads antigos em backend/outputs/uploads/ para evitar acúmulo em disco
+    UPLOADS_DIR = _OUTPUTS / "uploads"
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+    if arquivo_enviado is not None:
+        nome_seguro = re.sub(r'[^A-Za-z0-9_.-]', '_', arquivo_enviado.name)
+        caminho_upload = UPLOADS_DIR / nome_seguro
+        with open(caminho_upload, "wb") as f:
+            f.write(arquivo_enviado.getbuffer())
+        video_escolhido = str(caminho_upload)
+        st.success(f"Vídeo '{arquivo_enviado.name}' carregado com sucesso.")
 
     st.divider()
 
