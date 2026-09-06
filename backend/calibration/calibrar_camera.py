@@ -13,7 +13,7 @@ Controles:
   S  — salvar preset e sair
   Q  — sair sem salvar
 """
-import os, sys, cv2, json, argparse
+import os, sys, cv2, json, argparse, datetime, shutil
 from pathlib import Path
 
 _HERE    = Path(__file__).resolve().parent
@@ -188,6 +188,25 @@ class CalibradorCamera:
         }
         out_path = self.output_dir / f"{self.preset_name}.json"
         out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if out_path.exists():
+            resposta = input(
+                f"\n[Aviso] Preset '{self.preset_name}' já existe em {out_path}. "
+                f"Sobrescrever? [s/N] "
+            ).strip().lower()
+            if resposta != "s":
+                print("[Cancelado] Preset não foi salvo.")
+                return None
+
+            # Backup com timestamp antes de sobrescrever
+            ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            bak_path = self.output_dir / f"{self.preset_name}.json.bak.{ts}"
+            try:
+                shutil.copy2(out_path, bak_path)
+                print(f"[Backup] Cópia de segurança criada em: {bak_path}")
+            except Exception as e:
+                print(f"[Aviso] Falha ao criar backup: {e}")
+
         with open(out_path, "w", encoding="utf-8") as f:
             json.dump(preset, f, ensure_ascii=False, indent=2)
         print(f"\n[Salvo] Preset '{self.preset_name}' em: {out_path}")
@@ -234,8 +253,11 @@ class CalibradorCamera:
                 print("  [C] Pontos correntes limpos")
             elif key == ord("s"):
                 path = self._save(w, h)
-                print(f"[OK] Preset salvo. Use --preset {self.preset_name} ao monitorar.")
-                break
+                if path is not None:
+                    print(f"[OK] Preset salvo. Use --preset {self.preset_name} ao monitorar.")
+                    break
+                else:
+                    print("[Info] Retornando ao modo de calibração.")
             elif key in (ord("q"), 27):
                 print("[Q] Saindo sem salvar.")
                 break

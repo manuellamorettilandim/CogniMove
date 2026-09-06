@@ -142,3 +142,55 @@ def test_calibrador_camera_resolve_fonte_em_videos_originais(monkeypatch):
         assert len(captured_source) == 1
         assert captured_source[0] == str(arquivo_video)
 
+
+def test_save_preset_existente_cancelado_quando_usuario_recusa(monkeypatch):
+    """
+    (4.a) Valida que _save() cancela a gravação e preserva o arquivo existente
+    quando a confirmação do usuário for negativa ('n').
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out_dir = Path(tmpdir)
+        preset_name = "preset_duplicado"
+        arquivo_preset = out_dir / f"{preset_name}.json"
+        arquivo_preset.write_text('{"versao": "original"}', encoding="utf-8")
+
+        cal = CalibradorCamera(source=0, preset_name=preset_name, output_dir=out_dir)
+        cal.lines = [[[10, 10], [20, 20]]]
+
+        monkeypatch.setattr("builtins.input", lambda prompt: "n")
+
+        retorno = cal._save(width=1280, height=720)
+        assert retorno is None
+        assert arquivo_preset.read_text(encoding="utf-8") == '{"versao": "original"}'
+
+
+def test_save_preset_existente_cria_backup_e_sobrescreve_com_confirmacao(monkeypatch):
+    """
+    (4.b) Valida que _save() cria cópia de backup com timestamp e sobrescreve
+    o preset quando a confirmação do usuário for positiva ('s').
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out_dir = Path(tmpdir)
+        preset_name = "preset_duplicado"
+        arquivo_preset = out_dir / f"{preset_name}.json"
+        arquivo_preset.write_text('{"versao": "original"}', encoding="utf-8")
+
+        cal = CalibradorCamera(source=0, preset_name=preset_name, output_dir=out_dir)
+        cal.lines = [[[10, 10], [20, 20]]]
+
+        monkeypatch.setattr("builtins.input", lambda prompt: "s")
+
+        retorno = cal._save(width=1280, height=720)
+        assert retorno == arquivo_preset
+
+        # Verifica se o arquivo foi atualizado
+        dados_salvos = json.loads(arquivo_preset.read_text(encoding="utf-8"))
+        assert "lines" in dados_salvos
+        assert len(dados_salvos["lines"]) == 1
+
+        # Verifica se o backup foi criado com o conteúdo anterior
+        backups = list(out_dir.glob(f"{preset_name}.json.bak.*"))
+        assert len(backups) == 1
+        assert backups[0].read_text(encoding="utf-8") == '{"versao": "original"}'
+
+
