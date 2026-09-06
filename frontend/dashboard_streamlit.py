@@ -20,6 +20,7 @@ import json
 import time
 import datetime
 import re
+import threading
 from pathlib import Path
 
 import cv2
@@ -142,6 +143,131 @@ st.markdown("""
 
 
 # ── Inicialização do Estado Compartilhado ─────────────────────────────────────
+
+class VideoProcessingState:
+    """Estrutura protegida por lock para comunicação thread-safe com o Streamlit."""
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.is_running = False
+        self.stop_requested = False
+        self.latest_frame = None
+        self.latest_infractions = []
+        self.progress = 0.0
+        self.frame_idx = 0
+        self.total_frames = 0
+        self.status_message = "Pronto para iniciar."
+        self.error_message = None
+        self.completed = False
+        self.thread = None
+
+
+def processar_video_worker(state: VideoProcessingState, video_path: str, preset_name: str, usar_ia: bool, contexto, motor):
+    """Executa a leitura e detecção de frames em segundo plano em thread separada."""
+    with state.lock:
+        state.is_running = True
+        state.stop_requested = False
+        state.completed = False
+        state.error_message = None
+        state.status_message = "Iniciando processamento..."
+        state.progress = 0.0
+        state.frame_idx = 0
+
+    detector = None
+    if usar_ia:
+        try:
+            from infracoes.detector import InfracaoDetector
+            detector = InfracaoDetector(
+                source          = video_path,
+                preset_name     = preset_name,
+                camera_name     = preset_name.replace("_", " ").title(),
+                show_window     = False,
+                contexto_urbano = contexto,
+                motor_causa_raiz= motor,
+            )
+        except Exception as e:
+            with state.lock:
+                state.error_message = f"Erro ao instanciar detector com IA: {e}"
+                state.is_running = False
+                state.status_message = "Erro na inicialização"
+            return
+
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        with state.lock:
+            state.error_message = f"Não foi possível ler o arquivo: {video_path}"
+            state.is_running = False
+            state.status_message = "Erro ao abrir vídeo"
+        return
+
+    try:
+        w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+        with state.lock:
+            state.total_frames = total_frames
+
+        if detector:
+            detector._setup(w, h, fps)
+
+        frame_idx = 0
+        while cap.isOpened():
+            with state.lock:
+                if state.stop_requested:
+                    break
+
+            ret, frame = cap.read()
+            if not ret:
+                break
+            frame_idx += 1
+
+            infractions = []
+            if detector:
+                annotated_frame, infractions = detector._process_frame(frame)
+                display_frame = annotated_frame
+            else:
+                display_frame = frame
+
+            # Redimensionar para exibição se necessário
+            rgb = cv2.cvtColor(display_frame, cv2.COLOR_BGR2RGB)
+            max_w = 700
+            if w > max_w:
+                scale = max_w / w
+                rgb = cv2.resize(rgb, (max_w, int(h * scale)))
+
+            prog = min(frame_idx / total_frames, 1.0) if total_frames > 0 else 0.0
+
+            with state.lock:
+                state.latest_frame = rgb
+                state.latest_infractions = infractions
+                state.progress = prog
+                state.frame_idx = frame_idx
+                state.status_message = f"Processando frame {frame_idx}/{total_frames}" if total_frames > 0 else f"Frame {frame_idx}"
+
+            time.sleep(0.03)
+
+    except Exception as e:
+        with state.lock:
+            state.error_message = f"Erro durante processamento: {e}"
+    finally:
+        cap.release()
+        if detector and hasattr(detector, "stop"):
+            try:
+                detector.stop()
+            except Exception:
+                pass
+        with state.lock:
+            state.is_running = False
+            if state.stop_requested:
+                state.status_message = "⏹️ Processamento interrompido pelo usuário."
+            else:
+                state.completed = True
+                state.status_message = "✅ Execução concluída com sucesso!"
+
+
+if "proc_state" not in st.session_state:
+    st.session_state.proc_state = VideoProcessingState()
 
 if "contexto" not in st.session_state:
     st.session_state.contexto = GerenciadorContextoUrbano()
@@ -311,100 +437,90 @@ with col_camera:
     with btn_col2:
         parar = st.button("⏹️ Parar", use_container_width=True)
 
+    proc_state = st.session_state.proc_state
+
+    # Ação de parar: seta flag protegida por lock
     if parar:
+        with proc_state.lock:
+            proc_state.stop_requested = True
         st.session_state.processando = False
+        st.rerun()
 
+    # Ação de iniciar: dispara worker em thread dedicada (se não houver outra ativa)
     if iniciar and video_escolhido:
-        st.session_state.processando = True
+        with proc_state.lock:
+            ja_executando = proc_state.is_running
 
-        detector = None
-        if usar_ia:
-            try:
-                from infracoes.detector import InfracaoDetector
-                detector = InfracaoDetector(
-                    source          = video_escolhido,
-                    preset_name     = preset_escolhido,
-                    camera_name     = preset_escolhido.replace("_", " ").title(),
-                    show_window     = False,
-                    contexto_urbano = st.session_state.contexto,
-                    motor_causa_raiz= st.session_state.motor,
-                )
-            except Exception as e:
-                st.error(f"Erro ao instanciar detector com IA: {e}")
-                detector = None
+        if not ja_executando:
+            t = threading.Thread(
+                target=processar_video_worker,
+                args=(
+                    proc_state,
+                    video_escolhido,
+                    preset_escolhido,
+                    usar_ia,
+                    st.session_state.contexto,
+                    st.session_state.motor,
+                ),
+                daemon=True,
+            )
+            proc_state.thread = t
+            t.start()
+            st.session_state.processando = True
+            st.rerun()
 
-        cap = cv2.VideoCapture(video_escolhido)
-        if not cap.isOpened():
-            st.error(f"Não foi possível ler o arquivo: {video_escolhido}")
-            st.session_state.processando = False
-        else:
-            w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-            total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    # Leitura do estado mais recente da thread
+    with proc_state.lock:
+        is_running = proc_state.is_running
+        display_frame = proc_state.latest_frame
+        infractions = list(proc_state.latest_infractions)
+        prog = proc_state.progress
+        status_msg = proc_state.status_message
+        err_msg = proc_state.error_message
+        completed = proc_state.completed
 
-            if detector:
-                detector._setup(w, h, fps)
+    st.session_state.processando = is_running
 
-            pbar = st.progress(0, text="Processando vídeo urbano...")
-            frame_idx = 0
+    if err_msg:
+        st.error(err_msg)
 
-            while cap.isOpened() and st.session_state.processando:
-                ret, frame = cap.read()
-                if not ret:
-                    break
-                frame_idx += 1
-
-                infractions = []
-                if detector:
-                    annotated_frame, infractions = detector._process_frame(frame)
-                    display_frame = annotated_frame
-                else:
-                    display_frame = frame
-
-                # Se houver infrações detectadas no frame, exibir alerta estilo Seção 4.5
-                if infractions:
-                    for inf in infractions:
-                        tipo_legivel = inf["tipo"].replace("_", " ").title()
-                        conf_pct = int(float(inf.get("confianca", 0.95)) * 100)
-                        
-                        # Diagnóstico instantâneo
-                        ctx = st.session_state.contexto.obter_contexto_atual()
-                        causa_calc = st.session_state.motor.calcular_probabilidades(inf["tipo"], ctx)
-                        causa_top = causa_calc.get("causa_principal", "Em investigação")
-                        causa_conf = int(float(causa_calc.get("confianca", 0.5)) * 100)
-
-                        alert_placeholder.markdown(
-                            f'<div class="infraction-alert">'
-                            f'🚨 <b>Infração Detectada:</b> {tipo_legivel} — Confiança da IA: <b>{conf_pct}%</b><br>'
-                            f'🔍 <b>Causa-Raiz Provável:</b> {causa_top} (Probabilidade: <b>{causa_conf}%</b>)'
-                            f'</div>',
-                            unsafe_allow_html=True,
-                        )
-
-                # Renderizar frame RGB redimensionado no Streamlit
-                rgb = cv2.cvtColor(display_frame, cv2.COLOR_BGR2RGB)
-                max_w = 700
-                if w > max_w:
-                    scale = max_w / w
-                    rgb = cv2.resize(rgb, (max_w, int(h * scale)))
-
-                frame_placeholder.image(rgb, use_container_width=True)
-
-                if total_frames > 0:
-                    prog = min(frame_idx / total_frames, 1.0)
-                    pbar.progress(prog, text=f"Frame {frame_idx}/{total_frames}")
-
-                # Limitar taxa de exibição para visualização fluida
-                time.sleep(0.03)
-
-            cap.release()
-            st.session_state.processando = False
-            pbar.progress(1.0, text="✅ Execução concluída!")
-            alert_placeholder.success("Processamento do fluxo finalizado. Os relatórios foram salvos e integrados.")
-
+    if display_frame is not None:
+        frame_placeholder.image(display_frame, use_container_width=True)
     elif not video_escolhido:
-        frame_placeholder.info("Nenhum arquivo de vídeo carregado. Adicione vídeos na pasta `videos_originais/`.")
+        frame_placeholder.info("Nenhum arquivo de vídeo carregado. Adicione vídeos na pasta `videos_originais/` ou envie pelo campo acima.")
+    else:
+        frame_placeholder.caption("Clique em '▶️ Iniciar Monitoramento' para começar.")
+
+    # Se houver infrações detectadas no frame mais recente, exibir alerta estilo Seção 4.5
+    if infractions:
+        for inf in infractions:
+            tipo_legivel = inf["tipo"].replace("_", " ").title()
+            conf_pct = int(float(inf.get("confianca", 0.95)) * 100)
+
+            # Diagnóstico instantâneo
+            ctx = st.session_state.contexto.obter_contexto_atual()
+            causa_calc = st.session_state.motor.calcular_probabilidades(inf["tipo"], ctx)
+            causa_top = causa_calc.get("causa_principal", "Em investigação")
+            causa_conf = int(float(causa_calc.get("confianca", 0.5)) * 100)
+
+            alert_placeholder.markdown(
+                f'<div class="infraction-alert">'
+                f'🚨 <b>Infração Detectada:</b> {tipo_legivel} — Confiança da IA: <b>{conf_pct}%</b><br>'
+                f'🔍 <b>Causa-Raiz Provável:</b> {causa_top} (Probabilidade: <b>{causa_conf}%</b>)'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    # Atualização fluida da interface
+    if is_running:
+        st.progress(prog, text=status_msg)
+        time.sleep(0.04)
+        st.rerun()
+    elif completed:
+        st.progress(1.0, text=status_msg)
+        alert_placeholder.success("Processamento do fluxo finalizado. Os relatórios foram salvos e integrados.")
+    elif status_msg and "interrompido" in status_msg:
+        st.warning(status_msg)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
