@@ -1,8 +1,12 @@
 """
-Testes Unitários — Ferramenta de Calibração de Câmera (Separação Faixa vs Retenção)
+Testes Unitários — Ferramenta de Calibração de Câmera (backend/calibration/calibrar_camera.py)
 
-Valida que a ferramenta de calibração separa corretamente Linha de Faixa (L)
-de Linha de Retenção Semafórica (R), gerando presets JSON não-duplicados.
+Valida o funcionamento isolado do CalibradorCamera sem abrir janelas OpenCV:
+- Tratamento de eventos de clique do mouse em _on_mouse() (linhas, retenções, polígonos)
+- Serialização e estrutura do JSON gerado em _save()
+- Proteção contra sobrescrita acidental e geração de backups
+- Remoção da última forma via tecla X
+- Detecção geométrica de polígonos autointersectantes
 """
 from __future__ import annotations
 
@@ -15,9 +19,10 @@ import pytest
 from backend.calibration.calibrar_camera import CalibradorCamera, polygon_is_self_intersecting
 
 
-def test_cliques_modo_line_alimentam_lines():
+def test_on_mouse_linha_completa_com_dois_pontos():
     """
-    (9.a) Simula 2 cliques no modo 'line' e valida que a linha é adicionada a self.lines.
+    (1.a) Simula dois cliques esquerdos no modo 'line' e valida que a linha é
+    adicionada a self.lines com os 2 pontos corretos, e que self.current_pts foi limpo.
     """
     cal = CalibradorCamera(source=0, preset_name="teste_faixa", output_dir=Path("/tmp"))
     cal.mode = "line"
@@ -25,9 +30,10 @@ def test_cliques_modo_line_alimentam_lines():
     # Clique 1: ponto inicial (100, 200)
     cal._on_mouse(cv2.EVENT_LBUTTONDOWN, 100, 200, 0, None)
     assert len(cal.current_pts) == 1
+    assert cal.current_pts[0] == [100, 200]
     assert len(cal.lines) == 0
 
-    # Clique 2: ponto final (300, 200) -> fecha a linha
+    # Clique 2: ponto final (300, 200) -> fecha a linha automaticamente
     cal._on_mouse(cv2.EVENT_LBUTTONDOWN, 300, 200, 0, None)
     assert len(cal.current_pts) == 0
     assert len(cal.lines) == 1
@@ -35,19 +41,111 @@ def test_cliques_modo_line_alimentam_lines():
     assert len(cal.stop_lines) == 0
 
 
+def test_on_mouse_poligono_fecha_com_clique_direito():
+    """
+    (1.b) Simula 4 cliques esquerdos seguidos de 1 clique direito no modo 'polygon'
+    e confirma que um polígono de 4 pontos foi adicionado a self.polygons e self.current_pts limpo.
+    """
+    cal = CalibradorCamera(source=0, preset_name="teste_poligono", output_dir=Path("/tmp"))
+    cal.mode = "polygon"
+
+    pontos_esperados = [[10, 10], [100, 10], [100, 100], [10, 100]]
+    for x, y in pontos_esperados:
+        cal._on_mouse(cv2.EVENT_LBUTTONDOWN, x, y, 0, None)
+
+    assert len(cal.current_pts) == 4
+    assert len(cal.polygons) == 0
+
+    # Clique direito para fechar o polígono
+    cal._on_mouse(cv2.EVENT_RBUTTONDOWN, 0, 0, 0, None)
+    assert len(cal.current_pts) == 0
+    assert len(cal.polygons) == 1
+    assert cal.polygons[0] == pontos_esperados
+
+
+def test_save_gera_estrutura_json_esperada():
+    """
+    (1.c) Instancia CalibradorCamera com linhas, retenções, polígonos e cruzamentos conhecidos,
+    chama _save() em diretório temporário e confirma que todos os campos esperados estão no JSON.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out_dir = Path(tmpdir)
+        preset_name = "preset_completo"
+        cal = CalibradorCamera(source=0, preset_name=preset_name, output_dir=out_dir)
+
+        cal.lines = [[[10, 20], [30, 40]]]
+        cal.stop_lines = [[[50, 60], [70, 80]]]
+        cal.polygons = [[[100, 100], [200, 100], [200, 200], [100, 200]]]
+        cal.intersections = [[[300, 300], [400, 300], [400, 400], [300, 400]]]
+
+        ref_w, ref_h = 1920, 1080
+        out_file = cal._save(width=ref_w, height=ref_h)
+        assert out_file is not None
+        assert out_file.exists()
+
+        with open(out_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        assert data["name"] == preset_name
+        assert data["ref_width"] == ref_w
+        assert data["ref_height"] == ref_h
+
+        # Valida linhas de faixa
+        assert len(data["lines"]) == 1
+        assert data["lines"][0]["pt1"] == [10, 20]
+        assert data["lines"][0]["pt2"] == [30, 40]
+
+        # Valida linhas de retenção
+        assert len(data["stop_lines"]) == 1
+        assert data["stop_lines"][0]["pt1"] == [50, 60]
+        assert data["stop_lines"][0]["pt2"] == [70, 80]
+
+        # Valida polígonos (bike box)
+        assert len(data["polygons"]) == 1
+        assert data["polygons"][0]["points"] == cal.polygons[0]
+        assert data["polygons"][0]["type"] == "bike_box"
+
+        # Valida polígonos de cruzamento
+        assert len(data["intersection_polygons"]) == 1
+        assert data["intersection_polygons"][0]["points"] == cal.intersections[0]
+        assert data["intersection_polygons"][0]["type"] == "intersection"
+
+
+def test_save_nao_sobrescreve_sem_confirmacao(monkeypatch):
+    """
+    (1.d) Confirma que chamar _save() duas vezes com o mesmo preset_name, mockando input()
+    para retornar 'n' na segunda vez, preserva o conteúdo do primeiro arquivo salvo.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out_dir = Path(tmpdir)
+        preset_name = "camera_praca"
+        cal = CalibradorCamera(source=0, preset_name=preset_name, output_dir=out_dir)
+
+        cal.lines = [[[1, 1], [2, 2]]]
+        arquivo_primeiro = cal._save(width=1280, height=720)
+        assert arquivo_primeiro.exists()
+        conteudo_original = arquivo_primeiro.read_text(encoding="utf-8")
+
+        # Altera geometrias na memória e tenta salvar novamente recusando confirmação
+        cal.lines = [[[99, 99], [100, 100]]]
+        monkeypatch.setattr("builtins.input", lambda prompt: "n")
+
+        retorno = cal._save(width=1280, height=720)
+        assert retorno is None
+        assert arquivo_primeiro.read_text(encoding="utf-8") == conteudo_original
+
+
 def test_cliques_modo_stop_line_alimentam_stop_lines():
     """
-    (9.b) Simula 2 cliques no modo 'stop_line' e valida que a linha é adicionada a self.stop_lines.
+    Simula 2 cliques no modo 'stop_line' e valida que a linha é adicionada a self.stop_lines.
     """
     cal = CalibradorCamera(source=0, preset_name="teste_retencao", output_dir=Path("/tmp"))
     cal.mode = "stop_line"
 
-    # Clique 1: (50, 150)
     cal._on_mouse(cv2.EVENT_LBUTTONDOWN, 50, 150, 0, None)
     assert len(cal.current_pts) == 1
     assert len(cal.stop_lines) == 0
 
-    # Clique 2: (450, 150) -> fecha a linha de retenção
     cal._on_mouse(cv2.EVENT_LBUTTONDOWN, 450, 150, 0, None)
     assert len(cal.current_pts) == 0
     assert len(cal.stop_lines) == 1
@@ -55,48 +153,37 @@ def test_cliques_modo_stop_line_alimentam_stop_lines():
     assert len(cal.lines) == 0
 
 
-def test_save_gera_json_com_lines_e_stop_lines_distintos():
+def test_save_preset_existente_cria_backup_e_sobrescreve_com_confirmacao(monkeypatch):
     """
-    (9.c) Configura lines e stop_lines com coordenadas diferentes e valida
-    que o preset JSON salvo contém estruturas independentes e não duplicadas.
+    Valida que _save() cria cópia de backup com timestamp e sobrescreve
+    o preset quando a confirmação do usuário for positiva ('s').
     """
     with tempfile.TemporaryDirectory() as tmpdir:
         out_dir = Path(tmpdir)
-        preset_name = "cruzamento_calibrado"
+        preset_name = "preset_duplicado"
+        arquivo_preset = out_dir / f"{preset_name}.json"
+        arquivo_preset.write_text('{"versao": "original"}', encoding="utf-8")
+
         cal = CalibradorCamera(source=0, preset_name=preset_name, output_dir=out_dir)
+        cal.lines = [[[10, 10], [20, 20]]]
 
-        # Configura geometrias distintas
-        linha_faixa = [[100, 200], [300, 200]]
-        linha_retencao = [[100, 250], [300, 250]]
+        monkeypatch.setattr("builtins.input", lambda prompt: "s")
 
-        cal.lines = [linha_faixa]
-        cal.stop_lines = [linha_retencao]
+        retorno = cal._save(width=1280, height=720)
+        assert retorno == arquivo_preset
 
-        preset_file = cal._save(width=1280, height=720)
-        assert preset_file.exists()
+        dados_salvos = json.loads(arquivo_preset.read_text(encoding="utf-8"))
+        assert "lines" in dados_salvos
+        assert len(dados_salvos["lines"]) == 1
 
-        with open(preset_file, "r", encoding="utf-8") as f:
-            dados = json.load(f)
-
-        assert "lines" in dados
-        assert "stop_lines" in dados
-
-        assert len(dados["lines"]) == 1
-        assert len(dados["stop_lines"]) == 1
-
-        # Conteúdo deve ser estritamente diferente
-        assert dados["lines"][0]["pt1"] == [100, 200]
-        assert dados["lines"][0]["pt2"] == [300, 200]
-
-        assert dados["stop_lines"][0]["pt1"] == [100, 250]
-        assert dados["stop_lines"][0]["pt2"] == [300, 250]
-
-        assert dados["lines"] != dados["stop_lines"]
+        backups = list(out_dir.glob(f"{preset_name}.json.bak.*"))
+        assert len(backups) == 1
+        assert backups[0].read_text(encoding="utf-8") == '{"versao": "original"}'
 
 
 def test_calibrador_camera_resolve_fonte_em_videos_originais(monkeypatch):
     """
-    (4) Confirma que CalibradorCamera consegue resolver um nome de arquivo
+    Confirma que CalibradorCamera consegue resolver um nome de arquivo
     que só existe em videos_originais/ (e não em videos_teste/).
     """
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -143,65 +230,14 @@ def test_calibrador_camera_resolve_fonte_em_videos_originais(monkeypatch):
         assert captured_source[0] == str(arquivo_video)
 
 
-def test_save_preset_existente_cancelado_quando_usuario_recusa(monkeypatch):
-    """
-    (4.a) Valida que _save() cancela a gravação e preserva o arquivo existente
-    quando a confirmação do usuário for negativa ('n').
-    """
-    with tempfile.TemporaryDirectory() as tmpdir:
-        out_dir = Path(tmpdir)
-        preset_name = "preset_duplicado"
-        arquivo_preset = out_dir / f"{preset_name}.json"
-        arquivo_preset.write_text('{"versao": "original"}', encoding="utf-8")
-
-        cal = CalibradorCamera(source=0, preset_name=preset_name, output_dir=out_dir)
-        cal.lines = [[[10, 10], [20, 20]]]
-
-        monkeypatch.setattr("builtins.input", lambda prompt: "n")
-
-        retorno = cal._save(width=1280, height=720)
-        assert retorno is None
-        assert arquivo_preset.read_text(encoding="utf-8") == '{"versao": "original"}'
-
-
-def test_save_preset_existente_cria_backup_e_sobrescreve_com_confirmacao(monkeypatch):
-    """
-    (4.b) Valida que _save() cria cópia de backup com timestamp e sobrescreve
-    o preset quando a confirmação do usuário for positiva ('s').
-    """
-    with tempfile.TemporaryDirectory() as tmpdir:
-        out_dir = Path(tmpdir)
-        preset_name = "preset_duplicado"
-        arquivo_preset = out_dir / f"{preset_name}.json"
-        arquivo_preset.write_text('{"versao": "original"}', encoding="utf-8")
-
-        cal = CalibradorCamera(source=0, preset_name=preset_name, output_dir=out_dir)
-        cal.lines = [[[10, 10], [20, 20]]]
-
-        monkeypatch.setattr("builtins.input", lambda prompt: "s")
-
-        retorno = cal._save(width=1280, height=720)
-        assert retorno == arquivo_preset
-
-        # Verifica se o arquivo foi atualizado
-        dados_salvos = json.loads(arquivo_preset.read_text(encoding="utf-8"))
-        assert "lines" in dados_salvos
-        assert len(dados_salvos["lines"]) == 1
-
-        # Verifica se o backup foi criado com o conteúdo anterior
-        backups = list(out_dir.glob(f"{preset_name}.json.bak.*"))
-        assert len(backups) == 1
-        assert backups[0].read_text(encoding="utf-8") == '{"versao": "original"}'
-
-
 def test_remover_ultima_forma_tecla_x():
     """
-    (4) Valida que a remoção da última forma (tecla X / remover_ultima_forma)
+    Valida que a remoção da última forma (remover_ultima_forma)
     remove apenas o último elemento da lista do modo ativo, preservando os anteriores.
     """
     cal = CalibradorCamera(source=0, preset_name="teste_remover", output_dir=Path("/tmp"))
 
-    # 1. Teste no modo line (faixa)
+    # 1. Modo line
     cal.mode = "line"
     linha_1 = [[10, 10], [20, 20]]
     linha_2 = [[30, 30], [40, 40]]
@@ -212,7 +248,7 @@ def test_remover_ultima_forma_tecla_x():
     assert len(cal.lines) == 1
     assert cal.lines[0] == linha_1
 
-    # 2. Teste no modo stop_line (retenção)
+    # 2. Modo stop_line
     cal.mode = "stop_line"
     ret_1 = [[50, 50], [60, 60]]
     ret_2 = [[70, 70], [80, 80]]
@@ -223,7 +259,7 @@ def test_remover_ultima_forma_tecla_x():
     assert len(cal.stop_lines) == 1
     assert cal.stop_lines[0] == ret_1
 
-    # 3. Teste quando a lista do modo está vazia (retorna None sem exceção)
+    # 3. Modo vazio
     cal.mode = "polygon"
     assert cal.remover_ultima_forma() is None
 
@@ -231,39 +267,31 @@ def test_remover_ultima_forma_tecla_x():
 def test_polygon_self_intersecting_detection_and_warning():
     """
     Valida a detecção de autointerseção em polígonos:
-    1. Polígono em formato de "8" / borboleta deve ser identificado como autointersectante (True).
+    1. Polígono em formato de '8' / borboleta deve ser identificado como autointersectante (True).
     2. Polígono simples (retângulo) NÃO deve ser identificado como autointersectante (False).
     3. Simula fechamento de polígono em _on_mouse() e verifica o aviso visual warning_msg.
     """
-    # 1. Polígono em "8" (autointersectante)
     poly_figura_8 = [[0, 0], [10, 10], [0, 10], [10, 0]]
     assert polygon_is_self_intersecting(poly_figura_8) is True
 
-    # 2. Polígono simples (retângulo não autointersectante)
     poly_retangulo = [[0, 0], [10, 0], [10, 10], [0, 10]]
     assert polygon_is_self_intersecting(poly_retangulo) is False
 
-    # Triângulo simples (menos de 4 pontos)
     poly_triangulo = [[0, 0], [10, 0], [5, 10]]
     assert polygon_is_self_intersecting(poly_triangulo) is False
 
-    # 3. Comportamento no CalibradorCamera (_on_mouse)
     cal = CalibradorCamera(source=0, preset_name="teste_warning", output_dir=Path("/tmp"))
     cal.mode = "polygon"
 
-    # Adiciona polígono em "8" e fecha com clique direito
+    # Polígono em 8
     cal.current_pts = list(poly_figura_8)
     cal._on_mouse(cv2.EVENT_RBUTTONDOWN, 0, 0, 0, None)
     assert len(cal.polygons) == 1
     assert cal.warning_msg is not None
     assert "autointersectante" in cal.warning_msg
 
-    # Adiciona polígono válido (retângulo) e fecha com clique direito -> aviso deve ser limpo
+    # Polígono válido
     cal.current_pts = list(poly_retangulo)
     cal._on_mouse(cv2.EVENT_RBUTTONDOWN, 0, 0, 0, None)
     assert len(cal.polygons) == 2
     assert cal.warning_msg is None
-
-
-
-
