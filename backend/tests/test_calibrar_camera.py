@@ -194,3 +194,38 @@ def test_save_preset_existente_cria_backup_e_sobrescreve_com_confirmacao(monkeyp
         assert backups[0].read_text(encoding="utf-8") == '{"versao": "original"}'
 
 
+def test_remover_ultima_forma_tecla_x():
+    """
+    (4) Valida que a remoção da última forma (tecla X / remover_ultima_forma)
+    remove apenas o último elemento da lista do modo ativo, preservando os anteriores.
+    """
+    cal = CalibradorCamera(source=0, preset_name="teste_remover", output_dir=Path("/tmp"))
+
+    # 1. Teste no modo line (faixa)
+    cal.mode = "line"
+    linha_1 = [[10, 10], [20, 20]]
+    linha_2 = [[30, 30], [40, 40]]
+    cal.lines = [linha_1, linha_2]
+
+    removido = cal.remover_ultima_forma()
+    assert removido == linha_2
+    assert len(cal.lines) == 1
+    assert cal.lines[0] == linha_1
+
+    # 2. Teste no modo stop_line (retenção)
+    cal.mode = "stop_line"
+    ret_1 = [[50, 50], [60, 60]]
+    ret_2 = [[70, 70], [80, 80]]
+    cal.stop_lines = [ret_1, ret_2]
+
+    removido_ret = cal.remover_ultima_forma()
+    assert removido_ret == ret_2
+    assert len(cal.stop_lines) == 1
+    assert cal.stop_lines[0] == ret_1
+
+    # 3. Teste quando a lista do modo está vazia (retorna None sem exceção)
+    cal.mode = "polygon"
+    assert cal.remover_ultima_forma() is None
+
+
+

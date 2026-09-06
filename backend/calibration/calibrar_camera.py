@@ -8,7 +8,8 @@ Controles:
   R  — modo Linha de Retenção Semafórica (RegraSinalVermelho)
   P  — modo Polígono (bike box / faixa)
   I  — modo Interseção (cruzamento)
-  Z  — desfazer último ponto
+  Z  — desfazer último ponto em edição
+  X  — remover última forma concluída do modo atual
   C  — limpar seleção atual
   S  — salvar preset e sair
   Q  — sair sem salvar
@@ -100,6 +101,23 @@ class CalibradorCamera:
                 print(f"  [+] Zona de cruzamento ({len(self.current_pts)} pts) adicionada.")
                 self.current_pts = []
 
+    # ── Remoção de formas concluídas ──────────────────────────────────────────
+
+    def remover_ultima_forma(self) -> list | None:
+        """Remove a última forma concluída da lista correspondente ao modo atual."""
+        lista = {
+            "line":         self.lines,
+            "stop_line":    self.stop_lines,
+            "polygon":      self.polygons,
+            "intersection": self.intersections,
+        }.get(self.mode)
+        if lista:
+            removido = lista.pop()
+            print(f"  [X] Última forma removida do modo '{self.mode}': {removido}")
+            return removido
+        print(f"  [X] Nenhuma forma para remover no modo '{self.mode}'.")
+        return None
+
     # ── Renderização ──────────────────────────────────────────────────────────
 
     def _render(self, frame):
@@ -151,7 +169,7 @@ class CalibradorCamera:
                     f"Faixa:{len(self.lines)}  Retencao:{len(self.stop_lines)}  "
                     f"Poligonos:{len(self.polygons)}  Cruzamentos:{len(self.intersections)}  "
                     f"Pts atuais:{len(self.current_pts)}  "
-                    f"[L/R/P/I=modo  Z=desfazer  C=limpar  S=salvar  Q=sair]",
+                    f"[L/R/P/I=modo  Z=desfazer pt  X=remover forma  C=limpar  S=salvar  Q=sair]",
                     (8,42),cv2.FONT_HERSHEY_SIMPLEX,0.36,(180,180,180),1,cv2.LINE_AA)
         return disp
 
@@ -219,7 +237,7 @@ class CalibradorCamera:
         print("  L = linha de faixa/limite  |  R = linha de retenção (semáforo)  |  P = polígono  |  I = interseção")
         print("  Clique esquerdo = adicionar ponto")
         print("  Clique direito  = fechar polígono/interseção")
-        print("  Z = desfazer  |  C = limpar  |  S = salvar  |  Q = sair")
+        print("  Z = desfazer ponto  |  X = remover última forma  |  C = limpar  |  S = salvar  |  Q = sair")
 
         frame = self._grab_frame()
         h, w  = frame.shape[:2]
@@ -248,6 +266,8 @@ class CalibradorCamera:
             elif key == ord("z") and self.current_pts:
                 removed = self.current_pts.pop()
                 print(f"  [-] Ponto removido: {removed}")
+            elif key == ord("x"):
+                self.remover_ultima_forma()
             elif key == ord("c"):
                 self.current_pts = []
                 print("  [C] Pontos correntes limpos")
