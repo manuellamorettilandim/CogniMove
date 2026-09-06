@@ -4,7 +4,8 @@ CogniMove — Ferramenta de Calibração Interativa de Câmera
 Clique nos pontos do frame para definir linhas e zonas, depois salve o preset.
 
 Controles:
-  L  — modo Linha (stop line / limite)
+  L  — modo Linha de Faixa/Limite (RegraFaixaPedestre)
+  R  — modo Linha de Retenção Semafórica (RegraSinalVermelho)
   P  — modo Polígono (bike box / faixa)
   I  — modo Interseção (cruzamento)
   Z  — desfazer último ponto
@@ -20,14 +21,16 @@ _BACKEND = _HERE.parent
 _ROOT    = _BACKEND.parent
 
 COLORS = {
-    "line":         (0,   255, 255),
+    "line":         (0,   255, 255),  # Ciano/Amarelo (Linha de Faixa)
+    "stop_line":    (0,   0,   255),  # Vermelho (Linha de Retenção Semafórica)
     "polygon":      (255, 200,   0),
     "intersection": (0,   100, 255),
 }
 
-MODES = ["line", "polygon", "intersection"]
+MODES = ["line", "stop_line", "polygon", "intersection"]
 MODE_LABELS = {
-    "line":         "L — LINHA DE RETENCAO/LIMITE",
+    "line":         "L — LINHA DE FAIXA/LIMITE (pedestre)",
+    "stop_line":    "R — LINHA DE RETENCAO (semaforo)",
     "polygon":      "P — POLIGONO (bike box / faixa)",
     "intersection": "I — ZONA DE CRUZAMENTO",
 }
@@ -39,7 +42,8 @@ class CalibradorCamera:
         self.preset_name = preset_name
         self.output_dir  = output_dir
 
-        self.lines:         list[list] = []   # cada item: lista de 2 pontos
+        self.lines:         list[list] = []   # Linhas de faixa/limite (RegraFaixaPedestre)
+        self.stop_lines:    list[list] = []   # Linhas de retenção (RegraSinalVermelho)
         self.polygons:      list[list] = []   # cada item: lista de N pontos
         self.intersections: list[list] = []   # cada item: lista de N pontos
 
@@ -76,10 +80,15 @@ class CalibradorCamera:
     def _on_mouse(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
             self.current_pts.append([x, y])
-            # Linha: completa com 2 pontos
+            # Linha de faixa: completa com 2 pontos
             if self.mode == "line" and len(self.current_pts) == 2:
                 self.lines.append(list(self.current_pts))
-                print(f"  [+] Linha adicionada: {self.current_pts}")
+                print(f"  [+] Linha de faixa adicionada: {self.current_pts}")
+                self.current_pts = []
+            # Linha de retenção: completa com 2 pontos
+            elif self.mode == "stop_line" and len(self.current_pts) == 2:
+                self.stop_lines.append(list(self.current_pts))
+                print(f"  [+] Linha de retenção adicionada: {self.current_pts}")
                 self.current_pts = []
         elif event == cv2.EVENT_RBUTTONDOWN:
             # Clique direito: fechar polígono/interseção
@@ -98,11 +107,17 @@ class CalibradorCamera:
         import numpy as np
         disp = frame.copy()
 
-        # Linhas salvas
+        # Linhas de faixa salvas
         for pts in self.lines:
             cv2.line(disp, tuple(pts[0]), tuple(pts[1]), COLORS["line"], 2)
             cv2.circle(disp, tuple(pts[0]), 5, COLORS["line"], -1)
             cv2.circle(disp, tuple(pts[1]), 5, COLORS["line"], -1)
+
+        # Linhas de retenção salvas
+        for pts in self.stop_lines:
+            cv2.line(disp, tuple(pts[0]), tuple(pts[1]), COLORS["stop_line"], 2)
+            cv2.circle(disp, tuple(pts[0]), 5, COLORS["stop_line"], -1)
+            cv2.circle(disp, tuple(pts[1]), 5, COLORS["stop_line"], -1)
 
         # Polígonos salvos
         for pts in self.polygons:
@@ -119,7 +134,7 @@ class CalibradorCamera:
                 cv2.circle(disp, tuple(p), 4, COLORS["intersection"], -1)
 
         # Pontos correntes
-        cur_color = COLORS[self.mode]
+        cur_color = COLORS.get(self.mode, (255, 255, 255))
         for p in self.current_pts:
             cv2.circle(disp, tuple(p), 5, cur_color, -1)
         if len(self.current_pts) >= 2:
@@ -134,16 +149,21 @@ class CalibradorCamera:
         cv2.putText(disp,f"MODO: {mode_lbl}",(8,20),
                     cv2.FONT_HERSHEY_SIMPLEX,0.52,cur_color,1,cv2.LINE_AA)
         cv2.putText(disp,
-                    f"Linhas:{len(self.lines)}  Poligonos:{len(self.polygons)}  "
-                    f"Cruzamentos:{len(self.intersections)}  "
+                    f"Faixa:{len(self.lines)}  Retencao:{len(self.stop_lines)}  "
+                    f"Poligonos:{len(self.polygons)}  Cruzamentos:{len(self.intersections)}  "
                     f"Pts atuais:{len(self.current_pts)}  "
-                    f"[L/P/I=modo  Z=desfazer  C=limpar  S=salvar  Q=sair]",
+                    f"[L/R/P/I=modo  Z=desfazer  C=limpar  S=salvar  Q=sair]",
                     (8,42),cv2.FONT_HERSHEY_SIMPLEX,0.36,(180,180,180),1,cv2.LINE_AA)
         return disp
 
     # ── Salvar preset ────────────────────────────────────────────────────────
 
     def _save(self, width: int, height: int):
+        # Nota de compatibilidade:
+        # Presets gerados anteriormente duplicavam self.lines em "stop_lines".
+        # Agora as duas geometrias são independentes:
+        #  - "lines" alimenta RegraFaixaPedestre (INVASAO_FAIXA)
+        #  - "stop_lines" alimenta RegraSinalVermelho (AVANCO_SINAL_VERMELHO)
         preset = {
             "name":        self.preset_name,
             "ref_width":   width,
@@ -155,8 +175,8 @@ class CalibradorCamera:
             ],
             "stop_lines": [
                 {"name": f"Retencao {i+1}", "pt1": pts[0], "pt2": pts[1],
-                 "color": [0,255,255]}
-                for i, pts in enumerate(self.lines)
+                 "color": [0,0,255]}
+                for i, pts in enumerate(self.stop_lines)
             ],
             "polygons": [
                 {"name": f"Area {i+1}", "type": "bike_box", "points": pts}
@@ -178,7 +198,7 @@ class CalibradorCamera:
 
     def run(self):
         print("\n=== CogniMove — Calibração de Câmera ===")
-        print("  L = linha de retenção  |  P = polígono  |  I = interseção")
+        print("  L = linha de faixa/limite  |  R = linha de retenção (semáforo)  |  P = polígono  |  I = interseção")
         print("  Clique esquerdo = adicionar ponto")
         print("  Clique direito  = fechar polígono/interseção")
         print("  Z = desfazer  |  C = limpar  |  S = salvar  |  Q = sair")
@@ -197,7 +217,10 @@ class CalibradorCamera:
 
             if key == ord("l"):
                 self.mode = "line";         self.current_pts = []
-                print("[Modo] Linha de retenção/limite")
+                print("[Modo] Linha de faixa/limite (pedestre)")
+            elif key == ord("r"):
+                self.mode = "stop_line";    self.current_pts = []
+                print("[Modo] Linha de retenção (semáforo)")
             elif key == ord("p"):
                 self.mode = "polygon";      self.current_pts = []
                 print("[Modo] Polígono (bike box / faixa)")

@@ -1,0 +1,94 @@
+"""
+Testes Unitários — Ferramenta de Calibração de Câmera (Separação Faixa vs Retenção)
+
+Valida que a ferramenta de calibração separa corretamente Linha de Faixa (L)
+de Linha de Retenção Semafórica (R), gerando presets JSON não-duplicados.
+"""
+from __future__ import annotations
+
+import cv2
+import json
+import tempfile
+from pathlib import Path
+import pytest
+
+from backend.calibration.calibrar_camera import CalibradorCamera
+
+
+def test_cliques_modo_line_alimentam_lines():
+    """
+    (9.a) Simula 2 cliques no modo 'line' e valida que a linha é adicionada a self.lines.
+    """
+    cal = CalibradorCamera(source=0, preset_name="teste_faixa", output_dir=Path("/tmp"))
+    cal.mode = "line"
+
+    # Clique 1: ponto inicial (100, 200)
+    cal._on_mouse(cv2.EVENT_LBUTTONDOWN, 100, 200, 0, None)
+    assert len(cal.current_pts) == 1
+    assert len(cal.lines) == 0
+
+    # Clique 2: ponto final (300, 200) -> fecha a linha
+    cal._on_mouse(cv2.EVENT_LBUTTONDOWN, 300, 200, 0, None)
+    assert len(cal.current_pts) == 0
+    assert len(cal.lines) == 1
+    assert cal.lines[0] == [[100, 200], [300, 200]]
+    assert len(cal.stop_lines) == 0
+
+
+def test_cliques_modo_stop_line_alimentam_stop_lines():
+    """
+    (9.b) Simula 2 cliques no modo 'stop_line' e valida que a linha é adicionada a self.stop_lines.
+    """
+    cal = CalibradorCamera(source=0, preset_name="teste_retencao", output_dir=Path("/tmp"))
+    cal.mode = "stop_line"
+
+    # Clique 1: (50, 150)
+    cal._on_mouse(cv2.EVENT_LBUTTONDOWN, 50, 150, 0, None)
+    assert len(cal.current_pts) == 1
+    assert len(cal.stop_lines) == 0
+
+    # Clique 2: (450, 150) -> fecha a linha de retenção
+    cal._on_mouse(cv2.EVENT_LBUTTONDOWN, 450, 150, 0, None)
+    assert len(cal.current_pts) == 0
+    assert len(cal.stop_lines) == 1
+    assert cal.stop_lines[0] == [[50, 150], [450, 150]]
+    assert len(cal.lines) == 0
+
+
+def test_save_gera_json_com_lines_e_stop_lines_distintos():
+    """
+    (9.c) Configura lines e stop_lines com coordenadas diferentes e valida
+    que o preset JSON salvo contém estruturas independentes e não duplicadas.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out_dir = Path(tmpdir)
+        preset_name = "cruzamento_calibrado"
+        cal = CalibradorCamera(source=0, preset_name=preset_name, output_dir=out_dir)
+
+        # Configura geometrias distintas
+        linha_faixa = [[100, 200], [300, 200]]
+        linha_retencao = [[100, 250], [300, 250]]
+
+        cal.lines = [linha_faixa]
+        cal.stop_lines = [linha_retencao]
+
+        preset_file = cal._save(width=1280, height=720)
+        assert preset_file.exists()
+
+        with open(preset_file, "r", encoding="utf-8") as f:
+            dados = json.load(f)
+
+        assert "lines" in dados
+        assert "stop_lines" in dados
+
+        assert len(dados["lines"]) == 1
+        assert len(dados["stop_lines"]) == 1
+
+        # Conteúdo deve ser estritamente diferente
+        assert dados["lines"][0]["pt1"] == [100, 200]
+        assert dados["lines"][0]["pt2"] == [300, 200]
+
+        assert dados["stop_lines"][0]["pt1"] == [100, 250]
+        assert dados["stop_lines"][0]["pt2"] == [300, 250]
+
+        assert dados["lines"] != dados["stop_lines"]
