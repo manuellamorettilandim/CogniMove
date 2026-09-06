@@ -57,10 +57,12 @@ class VehicleTrack:
 class Rastreador:
     """Gerencia o rastreamento de veículos usando YOLOv8 + ByteTrack."""
 
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: str, max_frames_inativo: int = 300, intervalo_limpeza: int = 1000):
         self.model = YOLO(model_path)
         self.tracks: dict[int, VehicleTrack] = {}
         self.frame_idx = 0
+        self.max_frames_inativo = max_frames_inativo
+        self.intervalo_limpeza  = intervalo_limpeza
 
     def update(self, frame) -> list[VehicleTrack]:
         """
@@ -104,6 +106,14 @@ class Rastreador:
         for tid, track in self.tracks.items():
             if tid not in active_ids:
                 track.active = False
+
+        # Limpeza periódica de tracks inativos para evitar vazamento de memória em execuções contínuas
+        if self.intervalo_limpeza > 0 and self.frame_idx % self.intervalo_limpeza == 0:
+            limite = self.frame_idx - self.max_frames_inativo
+            self.tracks = {
+                tid: t for tid, t in self.tracks.items()
+                if t.active or t.last_seen is None or t.last_seen >= limite
+            }
 
         return active_tracks
 
