@@ -184,3 +184,37 @@ def test_validacao_modulo_rejeita_causa_orfa():
         assert "Causa órfã detectada" in str(excinfo.value)
     finally:
         MotorCausaRaiz.MODIFICADORES = copia_modificadores
+
+
+def test_desempate_deterministico_em_probabilidades_iguais(motor):
+    """
+    Valida se em caso de empate exato entre probabilidades, o critério de desempate
+    é determinístico (ordem alfabética) e independente da ordem de inserção no dicionário.
+    """
+    original_base = MotorCausaRaiz.TABELA_PROBABILIDADES_BASE.copy()
+    try:
+        # Ordem 1: Causa B antes de Causa A
+        MotorCausaRaiz.TABELA_PROBABILIDADES_BASE = {
+            "INFRACAO_TESTE_EMPATE": {
+                "Causa B": 0.45,
+                "Causa A": 0.45,
+                "Causa C": 0.10,
+            }
+        }
+        res1 = motor.calcular_probabilidades("INFRACAO_TESTE_EMPATE", {})
+
+        # Ordem 2: Causa A antes de Causa B
+        MotorCausaRaiz.TABELA_PROBABILIDADES_BASE = {
+            "INFRACAO_TESTE_EMPATE": {
+                "Causa A": 0.45,
+                "Causa B": 0.45,
+                "Causa C": 0.10,
+            }
+        }
+        res2 = motor.calcular_probabilidades("INFRACAO_TESTE_EMPATE", {})
+
+        # Ambos devem produzir rigorosamente o mesmo resultado determinístico
+        assert res1["causa_principal"] == res2["causa_principal"] == "Causa B"
+        assert res1["confianca"] == res2["confianca"] == 0.45
+    finally:
+        MotorCausaRaiz.TABELA_PROBABILIDADES_BASE = original_base

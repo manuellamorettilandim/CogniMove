@@ -1,7 +1,17 @@
+"""
+CogniMove — Pipeline de Treinamento YOLOv8 (Dataset Unificado)
+
+NOTA SOBRE BACKUPS:
+Ao final do treinamento, o modelo de produção anterior (backend/models/best.pt)
+é salvo automaticamente como backup com timestamp (ex: best.pt.bak.YYYYMMDD_HHMMSS).
+Como esses backups se acumulam em backend/models/ ao longo do tempo, recomenda-se
+uma limpeza periódica manual para economizar espaço em disco.
+"""
 import os
 import sys
 import shutil
 import ctypes
+import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 from ultralytics import YOLO
@@ -92,6 +102,15 @@ def main():
         batch=8
     )
 
+    # Exibir resumo das métricas do treinamento
+    try:
+        metrics = results.results_dict if hasattr(results, "results_dict") else {}
+        print("\n[LOG/INFO] Métricas do treinamento:")
+        for chave, valor in metrics.items():
+            print(f"  - {chave}: {valor}")
+    except Exception as e:
+        print(f"[AVISO] Não foi possível extrair métricas detalhadas: {e}")
+
     # 4. Localização e salvamento dos pesos finais (best.pt)
     best_weights_source = Path(results.save_dir) / "weights" / "best.pt"
     best_weights_dest = DEST_MODELS_DIR / "best.pt"
@@ -101,10 +120,16 @@ def main():
     if best_weights_source.exists():
         print(f"[LOG/INFO] Pesos finais gerados (best.pt) em: {best_weights_source}")
         
-        # Copiar best.pt para backend/models/ para fácil acesso na aplicação
+        # Fazer backup do modelo anterior antes de sobrescrever
         try:
             DEST_MODELS_DIR.mkdir(parents=True, exist_ok=True)
-            shutil.copy(best_weights_source, best_weights_dest)
+            if best_weights_dest.exists():
+                ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                backup_path = DEST_MODELS_DIR / f"best.pt.bak.{ts}"
+                shutil.copy2(best_weights_dest, backup_path)
+                print(f"[LOG/INFO] Backup do modelo anterior salvo em: {backup_path}")
+
+            shutil.copy2(best_weights_source, best_weights_dest)
             print(f"[LOG/INFO] Pesos 'best.pt' atualizados e salvos em: {best_weights_dest}")
         except Exception as e:
             print(f"[AVISO] Não foi possível copiar 'best.pt' para {best_weights_dest}: {e}")

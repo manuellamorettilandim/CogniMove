@@ -115,7 +115,7 @@ class MotorCausaRaiz:
         probs = self._normalizar(probs)
 
         # Determinar a causa principal
-        causa_top = max(probs, key=probs.get)
+        causa_top = max(probs.items(), key=lambda kv: (kv[1], kv[0]))[0]
 
         return {
             "causa_principal": causa_top,
