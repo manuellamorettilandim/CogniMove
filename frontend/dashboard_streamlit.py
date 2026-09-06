@@ -40,9 +40,13 @@ _PRESETS  = _BACKEND / "calibration" / "presets"
 
 sys.path.insert(0, str(_BACKEND))
 sys.path.insert(0, str(_BACKEND / "detection"))
+sys.path.insert(0, str(_FRONTEND))
+sys.path.insert(0, str(_ROOT))
 
 from analytics.contexto_urbano import GerenciadorContextoUrbano
 from analytics.causa_raiz import MotorCausaRaiz, Causa
+from recomendacoes import RECOMENDACOES_POR_CAUSA
+from utils_dashboard import obter_causa_predominante
 
 
 # ── Configuração da Página ────────────────────────────────────────────────────
@@ -550,7 +554,7 @@ with col_analise:
                 st.metric("Tipos Identificados", df["tipo"].nunique())
         with kpi3:
             if "causa_principal" in df.columns:
-                top_causa = df["causa_principal"].mode().iloc[0] if not df["causa_principal"].empty else "N/A"
+                top_causa = obter_causa_predominante(df, default="N/A")
                 st.metric("Causa Predominante", top_causa[:18] + "…" if len(top_causa) > 18 else top_causa)
 
         st.divider()
@@ -614,19 +618,17 @@ with col_analise:
 
         # Lógica explicativa baseada nas causas predominantes
         if "causa_principal" in df.columns:
-            top_causa = df["causa_principal"].mode().iloc[0] if not df["causa_principal"].empty else ""
+            top_causa = obter_causa_predominante(df, default="")
             total_inf = len(df)
-            causa_count = (df["causa_principal"] == top_causa).sum()
-            pct_top = int((causa_count / total_inf) * 100) if total_inf > 0 else 0
+            causa_count = (df["causa_principal"] == top_causa).sum() if top_causa else 0
+            pct_top = int((causa_count / total_inf) * 100) if total_inf > 0 and top_causa else 0
 
-            recs = {
-                Causa.PINTURA_DESGASTADA_AUSENTE.value: "Recomenda-se repintura imediata e aplicação de sinalização retrorrefletiva na faixa de pedestres para garantir visibilidade noturna e em dias chuvosos.",
-                Causa.TEMPO_SEMAFORICO_INADEQUADO.value: "Recomenda-se reprogramação dos ciclos semafóricos junto à CET, com aumento do tempo de verde e tempo de amarelo de segurança nos horários de pico.",
-                Causa.CONGESTIONAMENTO.value: "Recomenda-se sincronismo de onda verde e escalonamento de agentes de trânsito para evitar retenção na área de bloqueio de cruzamento.",
-                Causa.AUSENCIA_DE_SEGREGADOR_FISICO.value: "Recomenda-se instalação de tachões ou defensas físicas segregando a faixa exclusiva/ciclovia para coibir invasões recorrentes.",
-                Causa.SINALIZACAO_POUCO_VISIVEL.value: "Recomenda-se poda de árvores que obstruem placas e repaginação da geometria de aproximação viária.",
-                Causa.CONDUTA_DO_CONDUTOR.value: "Recomenda-se intensificação da fiscalização eletrônica/presencial e campanhas educativas de conscientização no trecho.",
-            }
+            recs = RECOMENDACOES_POR_CAUSA
+            causas_sem_recomendacao = [c for c in Causa if c.value not in recs]
+            if causas_sem_recomendacao:
+                nomes = ", ".join(c.value for c in causas_sem_recomendacao)
+                st.warning(f"⚠️ Causas sem recomendação cadastrada: {nomes}")
+
             rec_texto = recs.get(top_causa, "Recomenda-se inspeção técnica no local para avaliação dos conflitos entre pedestres e veículos.")
 
             st.markdown(
