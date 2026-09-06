@@ -126,3 +126,10 @@ python backend/detection/monitorar_infracoes.py --source videos_originais/video_
 --dashboard -d Iniciar dashboard legado em Flask
 --porta   -P   Porta do dashboard legado (padrão: 5000)
 ```
+
+---
+
+## 📚 Documentação Adicional
+
+Para entender a visão detalhada dos módulos, o fluxo de dados do sistema (diagrama Mermaid), o modelo de dados e a execução de testes automatizados, consulte a documentação de [ARQUITETURA.md](ARQUITETURA.md).
+

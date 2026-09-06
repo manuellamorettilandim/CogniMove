@@ -1,5 +1,5 @@
 """
-Rastreador de veículos usando ByteTrack (via YOLOv8 model.track()).
+Rastreador de veículos usando BoTSORT (via YOLOv8 model.track()).
 Mantém histórico de posições por ID para detectar cruzamentos de linha.
 """
 import os
@@ -55,7 +55,7 @@ class VehicleTrack:
 
 
 class Rastreador:
-    """Gerencia o rastreamento de veículos usando YOLOv8 + ByteTrack."""
+    """Gerencia o rastreamento de veículos usando YOLOv8 + BoTSORT."""
 
     def __init__(self, model_path: str, max_frames_inativo: int = 300, intervalo_limpeza: int = 1000):
         self.model = YOLO(model_path)
