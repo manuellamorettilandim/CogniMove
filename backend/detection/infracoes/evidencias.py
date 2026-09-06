@@ -11,6 +11,8 @@ import itertools
 import threading
 from collections import deque
 
+from backend.detection.limpeza import limpar_evidencias_antigas
+
 _clip_id_counter = itertools.count()
 
 
