@@ -242,6 +242,12 @@ def main():
 
     print("-----------------------------------------------------------------")
 
+    # Limpeza completa de execuções anteriores para garantir merge limpo e não-incremental
+    if DATASET_UNIFICADO_DIR.exists():
+        logging.info(f"🧹 Limpando dataset unificado anterior em: {DATASET_UNIFICADO_DIR}")
+        shutil.rmtree(DATASET_UNIFICADO_DIR)
+    logging.info(f"✨ Iniciando merge em destino limpo (não-incremental): {DATASET_UNIFICADO_DIR}")
+
     # Garante a criação da estrutura de destino unificada
     splits = ["train", "val"]
     for split in splits:
