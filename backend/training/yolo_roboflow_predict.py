@@ -30,8 +30,11 @@ def main():
     try:
         # Carrega a api_key de forma segura
         api_key = os.getenv("ROBOFLOW_API_KEY")
-        if not api_key or api_key == "CHAVE_REMOVIDA_POR_SEGURANCA":
-            raise ValueError("Chave de API do Roboflow ausente ou usando placeholder no arquivo .env.")
+        if not api_key:
+            raise ValueError(
+                "Chave de API do Roboflow ausente. Defina ROBOFLOW_API_KEY no arquivo .env "
+                "(veja .env.example)."
+            )
             
         rf = Roboflow(api_key=api_key)
         project = rf.workspace("mell-sowg7").project("imagens-cognimove")
@@ -51,7 +54,7 @@ def main():
         print(e)
         print("\n[DICA] Esse erro geralmente ocorre por problemas de permissão ou chave de API incorreta.")
         print("Se o projeto 'Imagens-Cognimove' no workspace 'mell-sowg7' for privado, você precisa")
-        print("substituir a 'api_key' no código pela sua chave privada do Roboflow (disponível em suas configurações do Roboflow).")
+        print("definir 'ROBOFLOW_API_KEY' no seu arquivo .env com a sua chave privada do Roboflow (disponível em suas configurações do Roboflow).")
         return
     
     # 2. Localizar imagens de teste
