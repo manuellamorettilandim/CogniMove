@@ -1,6 +1,9 @@
 """
-Teste de importação e lógica das regras — sem ultralytics.
-Simula tracks e verifica que as regras retornam infrações corretamente.
+CogniMove — Script de Desenvolvimento / Depuração Manual: testar_regras.py
+
+AVISO: Este script é uma ferramenta legada de prototipagem rápida da lógica de regras (sem ultralytics).
+NÃO faz parte da suíte oficial de testes nem do pipeline de produção. Para testes automatizados
+oficiais do projeto, execute 'pytest backend/tests/'. Veja backend/detection/NOTAS_SCRIPTS_DEV.md.
 """
 import sys, os, types
 sys.path.insert(0, os.path.dirname(__file__))

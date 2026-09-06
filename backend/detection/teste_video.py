@@ -1,3 +1,10 @@
+"""
+CogniMove — Script de Desenvolvimento / Depuração Manual: teste_video.py
+
+AVISO: Este script é uma ferramenta auxiliar de desenvolvimento local para testes
+rápidos de inferência em vídeo. NÃO faz parte do pipeline de produção testado
+(monitorar_infracoes.py / detector.py). Veja backend/detection/NOTAS_SCRIPTS_DEV.md.
+"""
 import os
 import glob
 import sys

@@ -1,3 +1,10 @@
+"""
+CogniMove — Script de Desenvolvimento / Depuração Manual: identificar_limite.py
+
+AVISO: Este script é uma ferramenta de prototipagem e auxílio visual para teste de demarcações.
+NÃO faz parte do pipeline de produção testado (monitorar_infracoes.py / detector.py).
+Veja backend/detection/NOTAS_SCRIPTS_DEV.md.
+"""
 import os
 import sys
 import glob
@@ -138,13 +145,13 @@ def processar_video(video_path, model_path="best.pt", output_path=None):
     
     if os.path.exists(best_pt):
         print(f"[IA] Carregando modelo customizado: {best_pt}")
-        model_limite = YOLO(best_pt)
+        model_path_to_use = best_pt
     else:
         print("[Aviso] Modelo 'best.pt' não encontrado, usando modelo base YOLOv8...")
-        model_limite = None
-        
-    yolov8_path = os.path.join(models_dir, "yolov8n.pt")
-    model_yolo = YOLO(yolov8_path if os.path.exists(yolov8_path) else "yolov8n.pt")
+        yolov8_path = os.path.join(models_dir, "yolov8n.pt")
+        model_path_to_use = yolov8_path if os.path.exists(yolov8_path) else "yolov8n.pt"
+
+    model_yolo = YOLO(model_path_to_use)
     
     cap = cv2.VideoCapture(video_path)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
