@@ -295,3 +295,36 @@ def test_polygon_self_intersecting_detection_and_warning():
     cal._on_mouse(cv2.EVENT_RBUTTONDOWN, 0, 0, 0, None)
     assert len(cal.polygons) == 2
     assert cal.warning_msg is None
+
+
+def test_auto_sugestao_aceitar_e_descartar():
+    """
+    Valida a aceitação e o descarte de sugestões geradas pela IA:
+    1. Popula `self.suggestions` com sugestões de retenção e faixa.
+    2. Valida que `descartar_sugestoes()` limpa as sugestões sem alterar as formas salvas.
+    3. Valida que `aceitar_sugestoes()` converte sugestões em formas permanentes (stop_lines e polygons).
+    """
+    cal = CalibradorCamera(source=0, preset_name="teste_sugestao", output_dir=Path("/tmp"))
+    cal.suggestions = [
+        {"target": "stop_line", "pts": [[10, 100], [200, 100]], "label": "Linha Limite"},
+        {"target": "polygon", "pts": [[20, 20], [100, 20], [100, 100], [20, 100]], "label": "Faixa Pedestre"}
+    ]
+
+    # Testar Descarte
+    cal.descartar_sugestoes()
+    assert len(cal.suggestions) == 0
+    assert len(cal.stop_lines) == 0
+    assert len(cal.polygons) == 0
+
+    # Testar Aceitação
+    cal.suggestions = [
+        {"target": "stop_line", "pts": [[10, 100], [200, 100]], "label": "Linha Limite"},
+        {"target": "polygon", "pts": [[20, 20], [100, 20], [100, 100], [20, 100]], "label": "Faixa Pedestre"}
+    ]
+    cal.aceitar_sugestoes()
+    assert len(cal.suggestions) == 0
+    assert len(cal.stop_lines) == 1
+    assert len(cal.polygons) == 1
+    assert cal.stop_lines[0] == [[10, 100], [200, 100]]
+    assert cal.polygons[0] == [[20, 20], [100, 20], [100, 100], [20, 100]]
+

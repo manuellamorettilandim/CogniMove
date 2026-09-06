@@ -56,6 +56,7 @@ COLORS = {
     "stop_line":    (0,   0,   255),  # Vermelho (Linha de Retenção Semafórica)
     "polygon":      (255, 200,   0),
     "intersection": (0,   100, 255),
+    "suggestion":   (255, 0,   255),  # Magenta (Sugestão temporária da IA)
 }
 
 MODES = ["line", "stop_line", "polygon", "intersection"]
@@ -77,6 +78,7 @@ class CalibradorCamera:
         self.stop_lines:    list[list] = []   # Linhas de retenção (RegraSinalVermelho)
         self.polygons:      list[list] = []   # cada item: lista de N pontos
         self.intersections: list[list] = []   # cada item: lista de N pontos
+        self.suggestions:   list[dict] = []   # Sugestões temporárias de IA (auto-sugestão)
 
         self.mode         = "line"
         self.current_pts: list        = []
@@ -157,6 +159,97 @@ class CalibradorCamera:
         print(f"  [X] Nenhuma forma para remover no modo '{self.mode}'.")
         return None
 
+    # ── Auto-Sugestão assistida por IA ──────────────────────────────────────
+
+    def gerar_auto_sugestoes(self, frame):
+        """
+        Roda o modelo best.pt no frame de referência para sugerir linhas e polígonos iniciais.
+        """
+        model_path = _ROOT / "backend" / "models" / "best.pt"
+        if not model_path.exists():
+            model_path = _ROOT / "backend" / "models" / "yolov8n.pt"
+
+        if not model_path.exists():
+            self.warning_msg = "Modelo de IA não encontrado para auto-sugestão."
+            print(f"  [!] {self.warning_msg}")
+            return
+
+        try:
+            from ultralytics import YOLO
+            print(f"  [IA] Executando auto-sugestão com modelo {model_path.name}...")
+            model = YOLO(str(model_path))
+            results = model.predict(source=frame, conf=0.20, verbose=False)
+        except Exception as e:
+            self.warning_msg = f"Erro ao rodar IA: {e}"
+            print(f"  [!] {self.warning_msg}")
+            return
+
+        self.suggestions = []
+        if not results or len(results) == 0:
+            self.warning_msg = "Nenhuma marcação viária detectada no frame."
+            print(f"  [!] {self.warning_msg}")
+            return
+
+        boxes = results[0].boxes
+        for box in boxes:
+            x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+            cls_id = int(box.cls[0].item())
+            cls_name = model.names.get(cls_id, f"classe_{cls_id}")
+            conf = float(box.conf[0].item())
+            w_box = x2 - x1
+            h_box = y2 - y1
+
+            cls_name_lower = cls_name.lower()
+            if "limite" in cls_name_lower or "retencao" in cls_name_lower:
+                pts = [[x1, y2], [x2, y2]] if w_box >= h_box else [[(x1 + x2) // 2, y1], [(x1 + x2) // 2, y2]]
+                self.suggestions.append({
+                    "target": "stop_line",
+                    "pts": pts,
+                    "label": f"Linha Limite ({conf:.0%})"
+                })
+            elif "faixa" in cls_name_lower or "pedestre" in cls_name_lower:
+                pts = [[x1, y1], [x2, y1], [x2, y2], [x1, y2]]
+                self.suggestions.append({
+                    "target": "polygon",
+                    "pts": pts,
+                    "label": f"Faixa Pedestre ({conf:.0%})"
+                })
+
+        if self.suggestions:
+            self.warning_msg = None
+            print(f"  [A] {len(self.suggestions)} sugestões de IA geradas! Pressione 'Y' para aceitar ou 'N' para descartar.")
+        else:
+            self.warning_msg = "Nenhuma linha ou faixa com confiança >= 20% foi localizada."
+            print(f"  [!] {self.warning_msg}")
+
+    def aceitar_sugestoes(self):
+        """Incorpora todas as sugestões ativas da IA nas listas permanentes."""
+        if not self.suggestions:
+            print("  [Y] Nenhuma sugestão pendente para aceitar.")
+            return
+        count_lines, count_polys = 0, 0
+        for sug in self.suggestions:
+            if sug["target"] == "stop_line":
+                self.stop_lines.append(sug["pts"])
+                count_lines += 1
+            elif sug["target"] == "line":
+                self.lines.append(sug["pts"])
+                count_lines += 1
+            elif sug["target"] == "polygon":
+                self.polygons.append(sug["pts"])
+                count_polys += 1
+
+        print(f"  [Y] Sugestões aceitas com sucesso: +{count_lines} linhas de retenção, +{count_polys} polígonos.")
+        self.suggestions = []
+        self.warning_msg = None
+
+    def descartar_sugestoes(self):
+        """Descarta as sugestões ativas da IA sem alterar a seleção atual."""
+        if self.suggestions:
+            print(f"  [N] {len(self.suggestions)} sugestões da IA foram descartadas.")
+            self.suggestions = []
+            self.warning_msg = None
+
     # ── Renderização ──────────────────────────────────────────────────────────
 
     def _render(self, frame):
@@ -189,6 +282,26 @@ class CalibradorCamera:
             for p in pts:
                 cv2.circle(disp, tuple(p), 4, COLORS["intersection"], -1)
 
+        # Sugestões temporárias da IA (Magenta)
+        for sug in self.suggestions:
+            pts = sug["pts"]
+            lbl = sug["label"]
+            if len(pts) == 2:
+                cv2.line(disp, tuple(pts[0]), tuple(pts[1]), COLORS["suggestion"], 3)
+                cv2.circle(disp, tuple(pts[0]), 6, COLORS["suggestion"], -1)
+                cv2.circle(disp, tuple(pts[1]), 6, COLORS["suggestion"], -1)
+                mid_x = (pts[0][0] + pts[1][0]) // 2
+                mid_y = (pts[0][1] + pts[1][1]) // 2
+                cv2.putText(disp, f"[IA] {lbl}", (mid_x, mid_y - 6),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.42, COLORS["suggestion"], 1, cv2.LINE_AA)
+            elif len(pts) >= 3:
+                poly = np.array(pts, np.int32)
+                cv2.polylines(disp, [poly.reshape(-1,1,2)], True, COLORS["suggestion"], 3)
+                for p in pts:
+                    cv2.circle(disp, tuple(p), 5, COLORS["suggestion"], -1)
+                cv2.putText(disp, f"[IA] {lbl}", tuple(pts[0]),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.42, COLORS["suggestion"], 1, cv2.LINE_AA)
+
         # Pontos correntes
         cur_color = COLORS.get(self.mode, (255, 255, 255))
         for p in self.current_pts:
@@ -208,9 +321,9 @@ class CalibradorCamera:
         cv2.putText(disp,
                     f"Faixa:{len(self.lines)}  Retencao:{len(self.stop_lines)}  "
                     f"Poligonos:{len(self.polygons)}  Cruzamentos:{len(self.intersections)}  "
-                    f"Pts atuais:{len(self.current_pts)}  "
-                    f"[L/R/P/I=modo  Z=desfazer pt  X=remover forma  C=limpar  S=salvar  Q=sair]",
-                    (8,42),cv2.FONT_HERSHEY_SIMPLEX,0.36,(180,180,180),1,cv2.LINE_AA)
+                    f"Sugestões IA:{len(self.suggestions)}  "
+                    f"[L/R/P/I=modo  A=sugestão IA (Y=aceitar, N=descartar)  Z=desfazer  X=remover  S=salvar  Q=sair]",
+                    (8,42),cv2.FONT_HERSHEY_SIMPLEX,0.34,(180,180,180),1,cv2.LINE_AA)
         if self.warning_msg:
             cv2.putText(disp, f"[!] {self.warning_msg}", (8,62),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.38, (0,0,255), 1, cv2.LINE_AA)
@@ -278,11 +391,13 @@ class CalibradorCamera:
     def run(self):
         print("\n=== CogniMove — Calibração de Câmera ===")
         print("  L = linha de faixa/limite  |  R = linha de retenção (semáforo)  |  P = polígono  |  I = interseção")
+        print("  A = auto-sugestão IA (best.pt)  |  Y = aceitar sugestões  |  N = descartar sugestões")
         print("  Clique esquerdo = adicionar ponto")
         print("  Clique direito  = fechar polígono/interseção")
         print("  Z = desfazer ponto  |  X = remover última forma  |  C = limpar  |  S = salvar  |  Q = sair")
 
         frame = self._grab_frame()
+        self.frame_orig = frame
         h, w  = frame.shape[:2]
         print(f"[Info] Resolução: {w}x{h}")
 
@@ -306,6 +421,12 @@ class CalibradorCamera:
             elif key == ord("i"):
                 self.mode = "intersection"; self.current_pts = []
                 print("[Modo] Zona de cruzamento")
+            elif key == ord("a"):
+                self.gerar_auto_sugestoes(frame)
+            elif key == ord("y"):
+                self.aceitar_sugestoes()
+            elif key == ord("n"):
+                self.descartar_sugestoes()
             elif key == ord("z") and self.current_pts:
                 removed = self.current_pts.pop()
                 print(f"  [-] Ponto removido: {removed}")
@@ -313,8 +434,9 @@ class CalibradorCamera:
                 self.remover_ultima_forma()
             elif key == ord("c"):
                 self.current_pts = []
+                self.suggestions = []
                 self.warning_msg = None
-                print("  [C] Pontos correntes limpos")
+                print("  [C] Pontos correntes e sugestões limpos")
             elif key == ord("s"):
                 path = self._save(w, h)
                 if path is not None:
