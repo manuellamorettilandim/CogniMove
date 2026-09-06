@@ -19,3 +19,6 @@ pytest>=7.0.0               # Framework de testes unitários
 
 # ── Utilitários ───────────────────────────────────────────────
 python-dotenv>=1.0.0        # Leitura do .env (chaves de API)
+
+# Calendario de feriados para calculo de contexto urbano por data
+holidays
