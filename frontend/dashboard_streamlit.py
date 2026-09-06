@@ -42,7 +42,7 @@ sys.path.insert(0, str(_BACKEND))
 sys.path.insert(0, str(_BACKEND / "detection"))
 
 from analytics.contexto_urbano import GerenciadorContextoUrbano
-from analytics.causa_raiz import MotorCausaRaiz
+from analytics.causa_raiz import MotorCausaRaiz, Causa
 
 
 # ── Configuração da Página ────────────────────────────────────────────────────
@@ -620,12 +620,12 @@ with col_analise:
             pct_top = int((causa_count / total_inf) * 100) if total_inf > 0 else 0
 
             recs = {
-                "Pintura desgastada / ausente": "Recomenda-se repintura imediata e aplicação de sinalização retrorrefletiva na faixa de pedestres para garantir visibilidade noturna e em dias chuvosos.",
-                "Tempo semafórico inadequado": "Recomenda-se reprogramação dos ciclos semafóricos junto à CET, com aumento do tempo de verde e tempo de amarelo de segurança nos horários de pico.",
-                "Congestionamento": "Recomenda-se sincronismo de onda verde e escalonamento de agentes de trânsito para evitar retenção na área de bloqueio de cruzamento.",
-                "Ausência de segregador físico": "Recomenda-se instalação de tachões ou defensas físicas segregando a faixa exclusiva/ciclovia para coibir invasões recorrentes.",
-                "Baixa visibilidade": "Recomenda-se reforço de iluminação viária LED e semáforos repetidores em pórticos elevados.",
-                "Sinalização pouco visível": "Recomenda-se poda de árvores que obstruem placas e repaginação da geometria de aproximação viária.",
+                Causa.PINTURA_DESGASTADA_AUSENTE.value: "Recomenda-se repintura imediata e aplicação de sinalização retrorrefletiva na faixa de pedestres para garantir visibilidade noturna e em dias chuvosos.",
+                Causa.TEMPO_SEMAFORICO_INADEQUADO.value: "Recomenda-se reprogramação dos ciclos semafóricos junto à CET, com aumento do tempo de verde e tempo de amarelo de segurança nos horários de pico.",
+                Causa.CONGESTIONAMENTO.value: "Recomenda-se sincronismo de onda verde e escalonamento de agentes de trânsito para evitar retenção na área de bloqueio de cruzamento.",
+                Causa.AUSENCIA_DE_SEGREGADOR_FISICO.value: "Recomenda-se instalação de tachões ou defensas físicas segregando a faixa exclusiva/ciclovia para coibir invasões recorrentes.",
+                Causa.SINALIZACAO_POUCO_VISIVEL.value: "Recomenda-se poda de árvores que obstruem placas e repaginação da geometria de aproximação viária.",
+                Causa.CONDUTA_DO_CONDUTOR.value: "Recomenda-se intensificação da fiscalização eletrônica/presencial e campanhas educativas de conscientização no trecho.",
             }
             rec_texto = recs.get(top_causa, "Recomenda-se inspeção técnica no local para avaliação dos conflitos entre pedestres e veículos.")
 
