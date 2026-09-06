@@ -9,7 +9,7 @@ Uso via monitorar_infracoes.py:
   python ../backend/detection/monitorar_infracoes.py --source 0 --dashboard
 """
 from __future__ import annotations
-import os, sys, json, queue, threading, argparse
+import os, sys, json, queue, threading, argparse, datetime
 from pathlib import Path
 from flask import (Flask, render_template, Response, jsonify,
                    request, stream_with_context, send_from_directory)
@@ -20,6 +20,7 @@ _BACKEND  = _ROOT / "backend"
 _DETECT   = _BACKEND / "detection"
 
 sys.path.insert(0, str(_DETECT))
+sys.path.insert(0, str(_ROOT))
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
@@ -28,6 +29,19 @@ frame_queue:     queue.Queue = queue.Queue(maxsize=2)
 infracoes_queue: queue.Queue = queue.Queue(maxsize=500)
 detector = None
 detector_thread: threading.Thread | None = None
+
+# ── Estado do Simulador de Câmera (Área 3 — ponte via arquivo de relatório) ──
+TIPOS_INFRACAO_VALIDOS = {
+    "AVANCO_SINAL_VERMELHO",
+    "INVASAO_FAIXA",
+    "BLOQUEIO_CRUZAMENTO",
+}
+_simulador_lock = threading.Lock()
+_simulador_estado = {
+    "contexto": None,
+    "motor": None,
+    "relatorio": None,
+}
 
 
 # ── Rotas principais ──────────────────────────────────────────────────────────
@@ -118,6 +132,86 @@ def api_videos():
                         "path": f"{pasta_nome}/{f.name}"
                     })
     return jsonify(videos)
+
+
+# ── Simulador de Câmera (Área 3 do dashboard Streamlit lê o mesmo relatório) ──
+
+@app.route("/simulador")
+def simulador_configuracao():
+    """Tela de configuração do simulador: data, hora e obra viária."""
+    return render_template("simulador.html")
+
+
+@app.route("/simulador/camera")
+def simulador_camera():
+    """Tela da câmera simulada (Canvas/JS)."""
+    return render_template("simulador_camera.html")
+
+
+@app.route("/api/simulador/iniciar", methods=["POST"])
+def api_simulador_iniciar():
+    """Consulta o contexto urbano real para a data/hora escolhida e inicia a sessão."""
+    from backend.analytics.causa_raiz import MotorCausaRaiz
+    from backend.analytics.contexto_tempo_real import construir_contexto_a_partir_de_data
+    from infracoes.relatorio import GerenciadorRelatorio
+
+    dados = request.get_json() or {}
+    data_str  = dados.get("data")
+    hora_str  = dados.get("hora")
+    obra_viaria = bool(dados.get("obra_viaria", False))
+
+    if not data_str or not hora_str:
+        return jsonify({"erro": "Campos 'data' e 'hora' são obrigatórios."}), 400
+
+    try:
+        data = datetime.date.fromisoformat(data_str)
+        hora = datetime.time.fromisoformat(hora_str)
+    except ValueError:
+        return jsonify({"erro": "Formato inválido para 'data' (AAAA-MM-DD) ou 'hora' (HH:MM)."}), 400
+
+    contexto = construir_contexto_a_partir_de_data(data, hora, obra_viaria_manual=obra_viaria)
+
+    with _simulador_lock:
+        _simulador_estado["contexto"]  = contexto
+        _simulador_estado["motor"]     = MotorCausaRaiz()
+        _simulador_estado["relatorio"] = GerenciadorRelatorio(
+            str(_BACKEND / "outputs" / "relatorios"),
+            camera_name="Simulador",
+        )
+
+    return jsonify(contexto)
+
+
+@app.route("/api/simulador/infracao", methods=["POST"])
+def api_simulador_infracao():
+    """Registra uma infração marcada manualmente na câmera simulada."""
+    dados = request.get_json() or {}
+    tipo = dados.get("tipo")
+
+    if tipo not in TIPOS_INFRACAO_VALIDOS:
+        return jsonify({"erro": f"Tipo de infração inválido: {tipo!r}."}), 400
+
+    with _simulador_lock:
+        contexto  = _simulador_estado["contexto"]
+        motor     = _simulador_estado["motor"]
+        relatorio = _simulador_estado["relatorio"]
+
+    if contexto is None or motor is None or relatorio is None:
+        return jsonify({"erro": "Simulação não iniciada. Chame /api/simulador/iniciar primeiro."}), 400
+
+    analise = motor.calcular_probabilidades(tipo, contexto)
+
+    infracao = {
+        "timestamp": datetime.datetime.now().isoformat(),
+        "tipo": tipo,
+        "descricao": tipo.replace("_", " ").title(),
+        "track_id": -1,
+        "classe": "carro",
+        "confianca": 1.0,
+    }
+    relatorio.adicionar(infracao, evidencias={}, analise_causa=analise)
+
+    return jsonify(analise)
 
 
 # ── Controle do detector ──────────────────────────────────────────────────────
