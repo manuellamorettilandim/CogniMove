@@ -78,6 +78,7 @@ def generate_training_data():
     # cls 0 = Limite, cls 1 = Faixa_Pedestre, cls 2 = Semaforo
     video_configs = {
         "video_teste4.mp4": {
+            "resolucao_esperada": (352, 240),  # (largura, altura)
             "boxes": [
                 # Limite inferior (linha de retenção antes da área de bicicletas / bike box)
                 (0, (20 + 145)/2/352, (140 + 220)/2/240, (145 - 20)/352, (220 - 140)/240),
@@ -92,6 +93,7 @@ def generate_training_data():
             ]
         },
         "video_teste3.mp4": {
+            "resolucao_esperada": (480, 270),
             "boxes": [
                 # Limite da pista esquerda (antes da faixa de pedestres)
                 (0, (30 + 180)/2/480, (195 + 220)/2/270, (180 - 30)/480, (220 - 195)/270),
@@ -107,6 +109,7 @@ def generate_training_data():
             ]
         },
         "video_teste2.mp4": {
+            "resolucao_esperada": (898, 506),
             "boxes": [
                 # Linha de limite / retenção
                 (0, (480 + 580)/2/898, (180 + 230)/2/506, (580 - 480)/898, (230 - 180)/506),
@@ -115,6 +118,7 @@ def generate_training_data():
             ]
         },
         "video_teste.mp4": {
+            "resolucao_esperada": (None, None),  # já usa proporção relativa fixa, não depende da resolução exata
             "boxes": [
                 # Limite de pista
                 (0, 0.5, 0.7, 0.35, 0.08)
@@ -135,6 +139,19 @@ def generate_training_data():
             continue
             
         cap = cv2.VideoCapture(vpath)
+        largura_real = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        altura_real = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        largura_esperada, altura_esperada = cfg.get("resolucao_esperada", (None, None))
+
+        if largura_esperada and (largura_real != largura_esperada or altura_real != altura_esperada):
+            print(
+                f"[AVISO] '{vname}' tem resolução {largura_real}x{altura_real}, "
+                f"mas as anotações foram calculadas para {largura_esperada}x{altura_esperada}. "
+                f"Pulando este vídeo para não gerar anotações incorretas."
+            )
+            cap.release()
+            continue
+
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         if total_frames <= 0:
             cap.release()
