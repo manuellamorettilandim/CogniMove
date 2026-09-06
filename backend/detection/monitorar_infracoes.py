@@ -60,43 +60,21 @@ def parse_args():
     return p.parse_args()
 
 
+from utils_video import resolver_fonte_video, PASTAS_VIDEO, EXTENSOES_VIDEO
+
+
 def find_source(source_arg):
     """Resolve a fonte de vídeo: tenta numérico, depois busca arquivo."""
     if source_arg is not None:
-        # Webcam por índice
-        try:
-            return int(source_arg)
-        except ValueError:
-            pass
-        # Arquivo ou URL RTSP
-        if os.path.isfile(source_arg):
-            return os.path.abspath(source_arg)
-        # Relativo à raiz do projeto
-        candidates = [
-            _ROOT / "videos_teste"   / source_arg,
-            _ROOT / "videos_originais" / source_arg,
-            _ROOT / source_arg,
-        ]
-        for c in candidates:
-            if c.is_file():
-                return str(c)
-        # RTSP / câmera IP — retornar como string
-        if source_arg.startswith(("rtsp://", "rtmp://", "http://", "https://")):
-            return source_arg
-        print(f"[Aviso] Fonte '{source_arg}' não encontrada como arquivo. "
-              "Tentando abrir diretamente...")
-        return source_arg
+        return resolver_fonte_video(source_arg, root=_ROOT)
 
     # Busca automática em videos_teste/ e videos_originais/
-    import glob
-    search_dirs = [
-        _ROOT / "videos_teste",
-        _ROOT / "videos_originais",
-    ]
     videos = []
-    for d in search_dirs:
-        for ext in ("*.mp4", "*.avi", "*.mov", "*.mkv"):
-            videos.extend(d.glob(ext))
+    for pasta_nome in PASTAS_VIDEO:
+        d = _ROOT / pasta_nome
+        if d.exists():
+            for ext in EXTENSOES_VIDEO:
+                videos.extend(d.glob(f"*{ext}"))
     if videos:
         videos.sort(key=lambda p: p.stat().st_mtime, reverse=True)
         chosen = str(videos[0])

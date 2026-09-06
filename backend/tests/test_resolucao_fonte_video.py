@@ -65,3 +65,27 @@ def test_resolver_fonte_webcam_e_stream():
     assert InfracaoDetector.resolver_fonte("1") == 1
     assert InfracaoDetector.resolver_fonte("rtsp://192.168.1.50/live") == "rtsp://192.168.1.50/live"
     assert InfracaoDetector.resolver_fonte("http://192.168.1.50:8080/video") == "http://192.168.1.50:8080/video"
+
+
+def test_scripts_deteccao_usam_resolver_fonte_video():
+    """
+    Garante que os scripts CLI (monitorar_infracoes, teste_video, identificar_limite)
+    importam e utilizam resolver_fonte_video de utils_video em vez de duplicar a lógica.
+    """
+    detection_dir = Path(__file__).resolve().parent.parent / "detection"
+    scripts = [
+        "monitorar_infracoes.py",
+        "teste_video.py",
+        "identificar_limite.py",
+    ]
+
+    for script_name in scripts:
+        script_path = detection_dir / script_name
+        assert script_path.exists(), f"Script {script_name} não encontrado em {detection_dir}"
+        content = script_path.read_text(encoding="utf-8")
+        assert "from utils_video import" in content or "import utils_video" in content, (
+            f"O script {script_name} deve importar utils_video."
+        )
+        assert "resolver_fonte_video" in content, (
+            f"O script {script_name} deve utilizar resolver_fonte_video."
+        )

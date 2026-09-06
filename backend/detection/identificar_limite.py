@@ -3,7 +3,17 @@ import sys
 import glob
 import cv2
 import numpy as np
+from pathlib import Path
 from ultralytics import YOLO
+
+# Garantir imports relativos de utils_video
+_HERE = Path(__file__).resolve().parent
+_BACKEND = _HERE.parent
+_ROOT = _BACKEND.parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+
+from utils_video import resolver_fonte_video, PASTAS_VIDEO, EXTENSOES_VIDEO
 
 # Coordenadas calibradas de referência para câmeras fixas conhecidas
 CAMERA_PRESETS = {
@@ -98,28 +108,12 @@ def point_to_line_distance(pt, line_pt1, line_pt2):
     return np.linalg.norm(p - projection)
 
 def resolve_video_path(video_path):
-    """Localiza o arquivo de vídeo verificando o caminho direto, pasta atual ou pastas de vídeos."""
+    """Localiza o arquivo de vídeo utilizando resolver_fonte_video centralizado."""
     if not video_path:
         return None
-    if os.path.isabs(video_path) and os.path.exists(video_path):
-        return video_path
-        
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    # detection/ -> backend/ -> project_root/
-    project_root = os.path.abspath(os.path.join(script_dir, "..", ".."))
-    
-    candidates = [
-        video_path,
-        os.path.abspath(video_path),
-        os.path.join(script_dir, video_path),
-        os.path.join(project_root, video_path),
-        os.path.join(project_root, "videos_originais", os.path.basename(video_path)),
-        os.path.join(project_root, "videos_teste",    os.path.basename(video_path)),
-        os.path.join(script_dir,   os.path.basename(video_path))
-    ]
-    for c in candidates:
-        if os.path.exists(c) and os.path.isfile(c) and os.path.getsize(c) > 0:
-            return os.path.abspath(c)
+    resolved = resolver_fonte_video(video_path, root=_ROOT)
+    if isinstance(resolved, str) and os.path.exists(resolved) and os.path.isfile(resolved) and os.path.getsize(resolved) > 0:
+        return os.path.abspath(resolved)
     return None
 
 def processar_video(video_path, model_path="best.pt", output_path=None):
@@ -273,21 +267,18 @@ def processar_video(video_path, model_path="best.pt", output_path=None):
     return output_path
 
 if __name__ == "__main__":
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    # detection/ -> backend/ -> project_root/
-    project_root = os.path.abspath(os.path.join(script_dir, "..", ".."))
-    
     # Se passado argumento pela linha de comando
     if len(sys.argv) > 1:
         video_arg = sys.argv[1]
     else:
         # Padrão: buscar nos diretórios de vídeo do projeto
-        cands = [
-            os.path.join(project_root, "videos_originais", "video_teste4.mp4"),
-            os.path.join(project_root, "videos_originais", "video_teste3.mp4"),
-            os.path.join(project_root, "videos_teste", "video_teste.mp4"),
-        ]
-        video_arg = next((c for c in cands if os.path.exists(c)), None)
+        cands = ["video_teste4.mp4", "video_teste3.mp4", "video_teste.mp4"]
+        video_arg = None
+        for c in cands:
+            res = resolver_fonte_video(c, root=_ROOT)
+            if isinstance(res, str) and os.path.exists(res):
+                video_arg = res
+                break
         
     if video_arg:
         processar_video(video_arg)

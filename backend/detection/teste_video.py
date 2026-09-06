@@ -2,7 +2,17 @@ import os
 import glob
 import sys
 import argparse
+from pathlib import Path
 from ultralytics import YOLO
+
+# Garantir imports relativos de utils_video
+_HERE = Path(__file__).resolve().parent
+_BACKEND = _HERE.parent
+_ROOT = _BACKEND.parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+
+from utils_video import resolver_fonte_video, PASTAS_VIDEO, EXTENSOES_VIDEO
 
 def find_best_pt():
     """
@@ -38,25 +48,16 @@ def find_video_file():
     """
     Localiza automaticamente um arquivo de vídeo em videos_teste/ e videos_originais/ na raiz do projeto.
     """
-    script_dir   = os.path.dirname(os.path.abspath(__file__))
-    # detection/ -> backend/ -> project_root/
-    project_root = os.path.abspath(os.path.join(script_dir, "..", ".."))
-    
-    search_dirs = [
-        os.path.join(project_root, "videos_teste"),
-        os.path.join(project_root, "videos_originais"),
-        script_dir,
-    ]
-        
-    video_extensions = ["*.mp4", "*.avi", "*.mov", "*.mkv"]
+    search_dirs = [_ROOT / pasta for pasta in PASTAS_VIDEO] + [_HERE]
     video_files = []
     
     for d in search_dirs:
-        for ext in video_extensions:
-            video_files.extend(glob.glob(os.path.join(d, ext)))
-            video_files.extend(glob.glob(os.path.join(d, ext.upper())))
+        if d.exists():
+            for ext in EXTENSOES_VIDEO:
+                video_files.extend(d.glob(f"*{ext}"))
+                video_files.extend(d.glob(f"*{ext.upper()}"))
             
-    valid_videos = [f for f in set(video_files) if os.path.isfile(f) and os.path.getsize(f) > 0]
+    valid_videos = [str(f) for f in set(video_files) if f.is_file() and f.stat().st_size > 0]
     
     if not valid_videos:
         return None
@@ -131,20 +132,11 @@ def main():
     # 3. Localizar arquivo de vídeo
     video_path = args.video
     if video_path:
-        if not os.path.exists(video_path):
-            # Tenta localizar nas pastas padrão
-            workspace_dir = os.path.dirname(script_dir)
-            cands = [
-                os.path.join(workspace_dir, "videos_originais", os.path.basename(video_path)),
-                os.path.join(script_dir, os.path.basename(video_path)),
-                os.path.join(workspace_dir, os.path.basename(video_path))
-            ]
-            found = next((c for c in cands if os.path.exists(c)), None)
-            if found:
-                video_path = found
-            else:
-                print(f"[Erro] O arquivo de vídeo '{video_path}' não existe.")
-                return
+        resolved = resolver_fonte_video(video_path, root=_ROOT)
+        if not os.path.exists(str(resolved)):
+            print(f"[Erro] O arquivo de vídeo '{video_path}' não existe.")
+            return
+        video_path = str(resolved)
         if not os.path.isfile(video_path):
             print(f"[Erro] O caminho '{video_path}' não é um arquivo válido.")
             return
@@ -162,7 +154,8 @@ def main():
                 try:
                     escolha = input("Aperte Enter para usar este vídeo ou digite o caminho do novo vídeo: ").strip()
                     if escolha:
-                        video_path = escolha
+                        resolved_esc = resolver_fonte_video(escolha, root=_ROOT)
+                        video_path = str(resolved_esc) if os.path.exists(str(resolved_esc)) else escolha
                     else:
                         video_path = localizado
                 except Exception:
