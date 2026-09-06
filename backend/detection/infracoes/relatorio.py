@@ -10,7 +10,7 @@ import threading
 
 
 class GerenciadorRelatorio:
-    """Grava infrações em CSV e JSON em modo append, thread-safe."""
+    """Grava infrações em CSV e JSON Lines (.jsonl) em modo append, thread-safe."""
 
     CAMPOS = [
         "timestamp", "frame", "tipo", "descricao",
@@ -26,8 +26,9 @@ class GerenciadorRelatorio:
         os.makedirs(output_dir, exist_ok=True)
 
         ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.csv_path  = os.path.join(output_dir, f"infracoes_{ts}.csv")
-        self.json_path = os.path.join(output_dir, f"infracoes_{ts}.json")
+        self.csv_path   = os.path.join(output_dir, f"infracoes_{ts}.csv")
+        self.jsonl_path = os.path.join(output_dir, f"infracoes_{ts}.jsonl")
+        self.json_path  = self.jsonl_path  # Alias para compatibilidade com código consumidor existente
 
         self._lock    = threading.Lock()
         self._records: list[dict] = []
@@ -36,15 +37,15 @@ class GerenciadorRelatorio:
         with open(self.csv_path, "w", newline="", encoding="utf-8") as f:
             csv.DictWriter(f, fieldnames=self.CAMPOS).writeheader()
 
-        # JSON inicial vazio
-        with open(self.json_path, "w", encoding="utf-8") as f:
-            json.dump([], f)
+        # Inicializar arquivo JSON Lines vazio
+        with open(self.jsonl_path, "w", encoding="utf-8") as f:
+            pass
 
     # ── API pública ───────────────────────────────────────────────────────────
 
     def adicionar(self, infracao: dict, evidencias: dict = None,
                   analise_causa: dict = None):
-        """Adiciona uma infração ao relatório (CSV + JSON).
+        """Adiciona uma infração ao relatório (CSV + JSON Lines em modo append).
 
         Args:
             infracao:       Dados da infração detectada.
@@ -72,16 +73,36 @@ class GerenciadorRelatorio:
         }
         with self._lock:
             self._records.append(record)
-            # Append no CSV
+            # Append O(1) no CSV
             with open(self.csv_path, "a", newline="", encoding="utf-8") as f:
                 csv.DictWriter(f, fieldnames=self.CAMPOS).writerow(record)
-            # Reescrever JSON completo
-            with open(self.json_path, "w", encoding="utf-8") as f:
-                json.dump(self._records, f, ensure_ascii=False, indent=2)
+            # Append O(1) no JSON Lines (uma linha JSON por registro, sem reescrever o arquivo)
+            with open(self.jsonl_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
-    def get_records(self) -> list[dict]:
+    def get_records(self, from_disk: bool = False) -> list[dict]:
+        """Retorna os registros de infrações.
+
+        Args:
+            from_disk: Se True, lê e reconstrói a lista a partir do arquivo JSON Lines em disco.
+                       Se False (padrão), retorna a cópia dos registros da sessão em memória.
+        """
         with self._lock:
-            return list(self._records)
+            if not from_disk:
+                return list(self._records)
+
+        # Leitura linha a linha do arquivo JSONL
+        records = []
+        if os.path.exists(self.jsonl_path):
+            with open(self.jsonl_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            records.append(json.loads(line))
+                        except json.JSONDecodeError:
+                            pass
+        return records
 
     def get_stats(self) -> dict:
         with self._lock:
@@ -90,3 +111,28 @@ class GerenciadorRelatorio:
                 t = r.get("tipo", "OUTRO")
                 stats[t] = stats.get(t, 0) + 1
             return stats
+
+    @staticmethod
+    def carregar_jsonl(caminho: str) -> list[dict]:
+        """Carrega e desserializa um arquivo JSON Lines existente em disco."""
+        registros = []
+        if os.path.exists(caminho):
+            with open(caminho, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            registros.append(json.loads(line))
+                        except json.JSONDecodeError:
+                            pass
+        return registros
+
+    def exportar_json_tradicional(self, caminho_saida: str | None = None) -> str:
+        """Exporta sob demanda todos os registros em um arquivo com array JSON tradicional."""
+        if caminho_saida is None:
+            caminho_saida = os.path.splitext(self.jsonl_path)[0] + ".json"
+        with self._lock:
+            data = list(self._records)
+        with open(caminho_saida, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return caminho_saida
