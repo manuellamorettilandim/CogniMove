@@ -1,5 +1,7 @@
 # 🚦 CogniMove — Sistema Inteligente de Detecção de Infrações de Trânsito
 
+[![Testes](https://github.com/manuellamorettilandim/CogniMove/actions/workflows/tests.yml/badge.svg)](https://github.com/manuellamorettilandim/CogniMove/actions/workflows/tests.yml)
+
 O **CogniMove** é uma solução completa e moderna de visão computacional voltada para o monitoramento urbano, detecção de infrações de trânsito em tempo real (avanço de sinal vermelho, invasão de faixa/bike box e bloqueio de cruzamento) com rastreamento persistente de veículos e dashboard web interativo.
 
 ---
