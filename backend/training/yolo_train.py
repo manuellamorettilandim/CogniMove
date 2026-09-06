@@ -10,7 +10,6 @@ uma limpeza periódica manual para economizar espaço em disco.
 import os
 import sys
 import shutil
-import ctypes
 import datetime
 from pathlib import Path
 from dotenv import load_dotenv
@@ -22,15 +21,6 @@ try:
     truststore.inject_into_ssl()
 except Exception:
     pass
-
-def get_short_path(long_path):
-    """Converte um caminho longo do Windows com acentos/espaços para formato seguro 8.3."""
-    try:
-        buffer = ctypes.create_unicode_buffer(1024)
-        ctypes.windll.kernel32.GetShortPathNameW(os.path.abspath(long_path), buffer, 1024)
-        return buffer.value if buffer.value else str(long_path)
-    except Exception:
-        return str(long_path)
 
 # Definição dos caminhos absolutos utilizando Path(__file__)
 SCRIPT_DIR = Path(__file__).resolve().parent
