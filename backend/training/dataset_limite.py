@@ -11,6 +11,10 @@ def create_dataset_directories(base_dir):
         os.makedirs(os.path.join(base_dir, split, "images"), exist_ok=True)
         os.makedirs(os.path.join(base_dir, split, "labels"), exist_ok=True)
 
+# ATENÇÃO: Os arquivos de configuração de dataset (em backend/training/configs/ ou
+# na raiz do módulo de treinamento) devem sempre ser gerados de forma programática
+# por este script utilizando caminhos relativos, nunca editados manualmente com
+# caminhos absolutos locais específicos de uma máquina ou usuário.
 def generate_yaml(dataset_dir, yaml_path):
     """Gera o arquivo de configuração data_limite.yaml com caminhos relativos."""
     yaml_content = """# Configuração do Dataset CogniMove - Classe Limite
