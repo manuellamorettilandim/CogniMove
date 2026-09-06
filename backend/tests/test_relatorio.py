@@ -87,3 +87,48 @@ def test_relatorio_carregar_jsonl_e_exportar_json_tradicional():
         assert isinstance(data, list)
         assert len(data) == 1
         assert data[0]["track_id"] == 99
+
+
+def test_nomes_arquivos_distintos_para_cameras_diferentes(monkeypatch):
+    """
+    (2) Instancia dois GerenciadorRelatorio com camera_name diferentes ("Camera A" e "Camera B")
+    no mesmo output_dir e no mesmo timestamp, confirmando que os caminhos gerados são únicos.
+    """
+    import datetime as dt_module
+
+    fake_now = dt_module.datetime(2026, 9, 5, 21, 30, 0)
+
+    class MockDatetime(dt_module.datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return fake_now
+
+    monkeypatch.setattr("backend.detection.infracoes.relatorio.datetime.datetime", MockDatetime)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        rel_a = GerenciadorRelatorio(tmpdir, camera_name="Camera A (Avenida)")
+        rel_b = GerenciadorRelatorio(tmpdir, camera_name="Camera B (Rua 1)")
+
+        # Valida que os caminhos são únicos
+        assert rel_a.csv_path != rel_b.csv_path
+        assert rel_a.jsonl_path != rel_b.jsonl_path
+
+        # Valida sanitização dos nomes nos arquivos
+        assert "Camera_A__Avenida_" in rel_a.csv_path
+        assert "Camera_B__Rua_1_" in rel_b.csv_path
+
+        # Grava infrações em ambos e valida ausência de sobrescrita
+        rel_a.adicionar({"tipo": "INVASAO_FAIXA", "track_id": 101, "descricao": "Evento A"})
+        rel_b.adicionar({"tipo": "BLOQUEIO_CRUZAMENTO", "track_id": 202, "descricao": "Evento B"})
+
+        recs_a = rel_a.get_records(from_disk=True)
+        recs_b = rel_b.get_records(from_disk=True)
+
+        assert len(recs_a) == 1
+        assert recs_a[0]["track_id"] == 101
+        assert recs_a[0]["camera"] == "Camera A (Avenida)"
+
+        assert len(recs_b) == 1
+        assert recs_b[0]["track_id"] == 202
+        assert recs_b[0]["camera"] == "Camera B (Rua 1)"
+

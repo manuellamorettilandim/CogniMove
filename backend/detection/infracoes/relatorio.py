@@ -3,10 +3,16 @@ Módulo de Relatório: registra infrações em CSV e JSON de forma thread-safe.
 """
 from __future__ import annotations
 import os
+import re
 import csv
 import json
 import datetime
 import threading
+
+
+def _sanitizar_nome_arquivo(nome: str) -> str:
+    """Sanitiza strings para nomes de arquivo seguros (apenas letras, dígitos, underline e hífen)."""
+    return re.sub(r'[^A-Za-z0-9_-]', '_', nome)
 
 
 class GerenciadorRelatorio:
@@ -25,9 +31,10 @@ class GerenciadorRelatorio:
         self.camera_name = camera_name
         os.makedirs(output_dir, exist_ok=True)
 
+        cam_slug = _sanitizar_nome_arquivo(camera_name)
         ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.csv_path   = os.path.join(output_dir, f"infracoes_{ts}.csv")
-        self.jsonl_path = os.path.join(output_dir, f"infracoes_{ts}.jsonl")
+        self.csv_path   = os.path.join(output_dir, f"infracoes_{cam_slug}_{ts}.csv")
+        self.jsonl_path = os.path.join(output_dir, f"infracoes_{cam_slug}_{ts}.jsonl")
         self.json_path  = self.jsonl_path  # Alias para compatibilidade com código consumidor existente
 
         self._lock    = threading.Lock()
