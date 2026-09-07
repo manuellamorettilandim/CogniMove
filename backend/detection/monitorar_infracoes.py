@@ -17,10 +17,11 @@ import threading
 import queue
 from pathlib import Path
 
-# Garantir que detection/ está no path para imports absolutos
+# Garantir que detection/, backend/ e a raiz do projeto estejam no path
 _HERE    = Path(__file__).resolve().parent   # detection/
 _BACKEND = _HERE.parent                      # backend/
 _ROOT    = _BACKEND.parent                   # Cognimove_Melissa/
+sys.path.insert(0, str(_ROOT))
 sys.path.insert(0, str(_HERE))
 sys.path.insert(0, str(_BACKEND))
 

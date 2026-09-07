@@ -57,8 +57,9 @@ class VehicleTrack:
 class Rastreador:
     """Gerencia o rastreamento de veículos usando YOLOv8 + BoTSORT."""
 
-    def __init__(self, model_path: str, max_frames_inativo: int = 300, intervalo_limpeza: int = 1000):
+    def __init__(self, model_path: str, max_frames_inativo: int = 300, intervalo_limpeza: int = 1000, conf: float = 0.10):
         self.model = YOLO(model_path)
+        self.conf  = conf
         self.tracks: dict[int, VehicleTrack] = {}
         self.frame_idx = 0
         self.max_frames_inativo = max_frames_inativo
@@ -72,7 +73,7 @@ class Rastreador:
         results = self.model.track(
             frame,
             classes=VEHICLE_CLASSES,
-            conf=0.25,
+            conf=self.conf,
             persist=True,
             verbose=False,
             tracker="botsort.yaml",  # BoTSORT: não requer lap (usa scipy)
