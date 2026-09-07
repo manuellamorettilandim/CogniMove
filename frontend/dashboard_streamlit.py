@@ -6,7 +6,8 @@ com análise de causa-raiz e integração de dados urbanos em tempo real.
 
 Estrutura visual em 3 áreas (Seção 4.5 do artigo):
   Área 1: Simulador de Câmera (Vídeo analisado pela IA com caixas delimitadoras e alertas explicativos)
-  Área 2: Simulador de Cenários Urbanos (Fatores externos: Chuva, Jogo, Horário de Pico, Feriado, Obras)
+  Área 2: Contexto Urbano Real (fatores obtidos por data/hora via APIs de clima,
+          feriados e agenda esportiva; obra viária informada manualmente)
   Área 3: Centro de Diagnóstico Inteligente (Gráficos, causas-raiz, correlações e recomendações públicas)
 
 Uso:
@@ -44,9 +45,15 @@ sys.path.insert(0, str(_FRONTEND))
 sys.path.insert(0, str(_ROOT))
 
 from analytics.contexto_urbano import GerenciadorContextoUrbano
+from analytics.contexto_tempo_real import construir_contexto_a_partir_de_data
 from analytics.causa_raiz import MotorCausaRaiz, Causa
 from recomendacoes import RECOMENDACOES_POR_CAUSA
-from utils_dashboard import obter_causa_predominante
+from utils_dashboard import (
+    coletar_avisos,
+    obter_causa_predominante,
+    resumir_contexto,
+    traduzir_avisos_contexto,
+)
 
 
 # ── Configuração da Página ────────────────────────────────────────────────────
@@ -389,34 +396,87 @@ with st.sidebar:
 
     st.divider()
 
-    st.markdown("## 🌧️ Fatores Urbanos (Módulo 3)")
-    st.caption("Ative os cenários simulados para recalcular probabilidades em tempo real:")
-
-    chk_chuva   = st.toggle("🌧️ Simular Chuva Forte", key="toggle_chuva")
-    chk_jogo    = st.toggle("⚽ Simular Dia de Jogo / Evento", key="toggle_jogo")
-    chk_pico    = st.toggle("🕐 Simular Horário de Pico", key="toggle_pico")
-    chk_feriado = st.toggle("🎉 Simular Feriado", key="toggle_feriado")
-    chk_obra    = st.toggle("🚧 Simular Obra Viária", key="toggle_obra")
-
-    # Atualiza o gerenciador em tempo real
-    st.session_state.contexto.atualizar_contexto(
-        chuva_forte=chk_chuva,
-        dia_jogo=chk_jogo,
-        horario_pico=chk_pico,
-        feriado=chk_feriado,
-        obra_viaria=chk_obra,
+    st.markdown("## 📅 Contexto da Gravação (Módulo 3)")
+    st.caption(
+        "Informe quando este vídeo foi gravado. O CogniMove consulta feriados, "
+        "clima e agenda esportiva reais para essa data e hora."
     )
 
-    ctx_atual = st.session_state.contexto.obter_contexto_atual()
-    ativos = ctx_atual["fatores_ativos"]
+    col_data, col_hora = st.columns(2)
+    with col_data:
+        data_gravacao = st.date_input(
+            "Data da gravação",
+            value=datetime.date(2026, 12, 25),
+            format="DD/MM/YYYY",
+            key="data_gravacao",
+        )
+    with col_hora:
+        hora_gravacao = st.time_input(
+            "Horário da gravação",
+            value=datetime.time(18, 0),
+            key="hora_gravacao",
+        )
+
+    obra_viaria = st.toggle(
+        "🚧 Obra viária no local",
+        key="toggle_obra",
+        help="Único fator sem fonte pública automatizável — informe manualmente.",
+    )
+
+    if st.button("🔍 Consultar contexto real", use_container_width=True, type="primary"):
+        with st.spinner("Consultando feriados, clima e jogos..."):
+            try:
+                with coletar_avisos(construir_contexto_a_partir_de_data.__module__) as avisos:
+                    st.session_state.contexto_dados = construir_contexto_a_partir_de_data(
+                        data_gravacao, hora_gravacao, obra_viaria_manual=obra_viaria
+                    )
+                st.session_state.contexto_avisos = traduzir_avisos_contexto(avisos)
+                st.session_state.contexto_erro = None
+            except Exception as e:
+                st.session_state.contexto_dados = None
+                st.session_state.contexto_avisos = []
+                st.session_state.contexto_erro = str(e)
+
+    if st.session_state.get("contexto_erro"):
+        st.warning(
+            "Não foi possível consultar todas as fontes externas "
+            f"({st.session_state.contexto_erro}). Fatores não confirmados serão "
+            "considerados inativos."
+        )
+
+    for aviso in st.session_state.get("contexto_avisos", []):
+        st.warning(aviso)
+
+    dados_ctx = st.session_state.get("contexto_dados")
+
+    if dados_ctx:
+        # O toggle de obra é manual e vale imediatamente, sem nova consulta de rede.
+        dados_ctx["obra_viaria"] = obra_viaria
+
+        # Reaplica as flags no gerenciador a cada rerun. É barato (não usa rede) e
+        # garante que o detector e o MotorCausaRaiz enxerguem sempre o contexto atual,
+        # já que o objeto é passado por referência para a thread de processamento.
+        st.session_state.contexto.atualizar_contexto(
+            chuva_forte=dados_ctx.get("chuva_forte", False),
+            dia_jogo=dados_ctx.get("dia_jogo", False),
+            horario_pico=dados_ctx.get("horario_pico", False),
+            feriado=dados_ctx.get("feriado", False),
+            obra_viaria=obra_viaria,
+        )
 
     st.markdown("---")
-    st.markdown("### 📊 Status do Ambiente:")
-    if ativos:
-        for f in ativos:
-            st.markdown(f"🔹 **{f}**")
+    st.markdown("### 📊 Status do Ambiente")
+
+    if dados_ctx:
+        DIAS = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira",
+                "Sexta-feira", "Sábado", "Domingo"]
+        cabecalho = (
+            f"📅 {DIAS[data_gravacao.weekday()]}, "
+            f"{data_gravacao.strftime('%d/%m/%Y')} às {hora_gravacao.strftime('%H:%M')}"
+        )
+        st.info(f"**{cabecalho}**\n\n{resumir_contexto(dados_ctx)}")
     else:
-        st.caption("Condições operacionais normais (padrão).")
+        st.caption("Clique em **Consultar contexto real** para carregar o contexto desta gravação.")
 
     st.divider()
     usar_ia = st.checkbox("⚡ Processar com Modelo de IA (YOLOv8 + ByteTrack)", value=True)
@@ -455,6 +515,10 @@ with col_camera:
         st.session_state.processando = False
         st.rerun()
 
+    if iniciar and not st.session_state.get("contexto_dados"):
+        st.warning("⚠️ Consulte o contexto da gravação (barra lateral) antes de iniciar o monitoramento.")
+        iniciar = False
+
     # Ação de iniciar: dispara worker em thread dedicada (se não houver outra ativa)
     if iniciar and video_escolhido:
         with proc_state.lock:
@@ -473,6 +537,12 @@ with col_camera:
                 ),
                 daemon=True,
             )
+            with proc_state.lock:
+                proc_state.is_running = True
+                proc_state.stop_requested = False
+                proc_state.completed = False
+                proc_state.error_message = None
+                proc_state.status_message = "Iniciando processamento..."
             proc_state.thread = t
             t.start()
             st.session_state.processando = True

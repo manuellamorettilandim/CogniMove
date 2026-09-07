@@ -27,3 +27,7 @@ node_modules/
 frontend/.env
 
 cognimovezipado.zip
+
+# Ferramenta descartável de apoio à demonstração
+scratch_datas_chuva.py
+scratch_datas_jogo.py

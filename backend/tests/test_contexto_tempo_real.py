@@ -14,7 +14,6 @@ import pytest
 from backend.analytics.contexto_tempo_real import (
     verificar_feriado,
     verificar_chuva_forte,
-    verificar_dia_de_jogo,
     verificar_horario_pico,
     construir_contexto_a_partir_de_data,
 )
@@ -83,26 +82,8 @@ def test_verificar_chuva_forte_falha_de_rede_retorna_fallback():
 
 
 # ── verificar_dia_de_jogo ───────────────────────────────────────────────────
-
-def test_verificar_dia_de_jogo_encontrado():
-    """Retorna (True, confronto) quando um dos times monitorados joga na data."""
-    resposta_mock = MagicMock()
-    resposta_mock.raise_for_status.return_value = None
-    resposta_mock.json.return_value = {
-        "events": [{"strHomeTeam": "Palmeiras", "strAwayTeam": "Corinthians"}]
-    }
-    with patch("backend.analytics.contexto_tempo_real.requests.get", return_value=resposta_mock):
-        jogo, confronto = verificar_dia_de_jogo(datetime.date(2026, 3, 10))
-    assert jogo is True
-    assert confronto == "Palmeiras x Corinthians"
-
-
-def test_verificar_dia_de_jogo_falha_de_rede_retorna_fallback():
-    """Se requests.get lançar exceção, retorna (False, None) sem propagar."""
-    with patch("backend.analytics.contexto_tempo_real.requests.get", side_effect=Exception("timeout")):
-        jogo, confronto = verificar_dia_de_jogo(datetime.date(2026, 3, 10))
-    assert jogo is False
-    assert confronto is None
+# Cobertura detalhada da nova fonte (calendário do Brasileirão via
+# openfootball) está em backend/tests/test_calendario_jogos.py.
 
 
 # ── construir_contexto_a_partir_de_data ─────────────────────────────────────
