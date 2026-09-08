@@ -32,3 +32,6 @@ cognimovezipado.zip
 *.bak.*
 resultado_validacao.txt
 
+# Ferramenta descartável de apoio à demonstração
+scratch_datas_chuva.py
+scratch_datas_jogo.py

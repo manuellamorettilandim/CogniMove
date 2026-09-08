@@ -76,23 +76,13 @@ def verificar_dia_de_jogo(
     data: datetime.date,
     times: tuple[str, ...] = ("Corinthians", "Palmeiras", "Sao Paulo", "Santos"),
 ) -> tuple[bool, str | None]:
-    """Consulta jogos de futebol na data via TheSportsDB (chave de teste "3")."""
+    """Consulta jogos de futebol na data via o calendário do Brasileirão (openfootball)."""
+    from backend.analytics.calendario_jogos import jogo_na_data
+
     try:
-        resp = requests.get(
-            "https://www.thesportsdb.com/api/v1/json/3/eventsday.php",
-            params={"d": data.isoformat(), "s": "Soccer"},
-            timeout=TIMEOUT_PADRAO,
-        )
-        resp.raise_for_status()
-        eventos = resp.json().get("events") or []
-        for ev in eventos:
-            home, away = ev.get("strHomeTeam", ""), ev.get("strAwayTeam", "")
-            for nome_time in times:
-                if nome_time.lower() in home.lower() or nome_time.lower() in away.lower():
-                    return True, f"{home} x {away}"
-        return False, None
+        return jogo_na_data(data, times)
     except Exception as e:
-        logger.warning("Falha ao consultar jogos (TheSportsDB): %s", e)
+        logger.warning("Falha ao consultar jogos (calendário Brasileirão): %s", e)
         return False, None
 
 
