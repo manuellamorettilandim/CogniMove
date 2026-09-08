@@ -27,3 +27,8 @@ node_modules/
 frontend/.env
 
 cognimovezipado.zip
+
+# Logs de depuração e backups locais
+*.bak.*
+resultado_validacao.txt
+
