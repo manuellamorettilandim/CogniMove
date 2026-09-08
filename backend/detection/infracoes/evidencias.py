@@ -6,12 +6,16 @@ from __future__ import annotations
 import os
 import cv2
 import time
+import logging
 import datetime
 import itertools
 import threading
+import numpy as np
 from collections import deque
 
 from backend.detection.limpeza import limpar_evidencias_antigas
+
+logger = logging.getLogger(__name__)
 
 _clip_id_counter = itertools.count()
 
@@ -65,6 +69,9 @@ class GerenciadorEvidencias:
         cv2.imwrite(ss_path, annotated, [cv2.IMWRITE_JPEG_QUALITY, 90])
 
         # ── Mini-clip ─────────────────────────────────────────────────────────
+        clip_name = f"{tipo}_{ts}_ID{tid}.mp4"
+        clip_path = os.path.join(self.clips_dir, clip_name)
+
         with self._lock:
             pre_frames = list(self._frame_buffer)
             clip_data  = {
@@ -72,7 +79,7 @@ class GerenciadorEvidencias:
                 "frames":        pre_frames,
                 "frames_needed": self.buffer_size + self.post_size,
                 "meta":          {"tipo": tipo, "ts": ts, "tid": tid},
-                "path":          None,
+                "path":          clip_path,
             }
             self._pending.append(clip_data)
 
@@ -82,7 +89,7 @@ class GerenciadorEvidencias:
             daemon=True,
         ).start()
 
-        return {"screenshot": ss_path, "clip": "pendente"}
+        return {"screenshot": ss_path, "clip": clip_path}
 
     # ── Helpers privados ──────────────────────────────────────────────────────
 
@@ -97,9 +104,7 @@ class GerenciadorEvidencias:
                 break
             time.sleep(0.05)
 
-        meta      = clip_data["meta"]
-        clip_name = f"{meta['tipo']}_{meta['ts']}_ID{meta['tid']}.mp4"
-        clip_path = os.path.join(self.clips_dir, clip_name)
+        clip_path = clip_data["path"]
 
         frames = clip_data["frames"]
         if not frames:
@@ -107,16 +112,112 @@ class GerenciadorEvidencias:
                 self._pending = [c for c in self._pending if c.get("id") != clip_data.get("id")]
             return
 
-        h, w  = frames[0].shape[:2]
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        writer = cv2.VideoWriter(clip_path, fourcc, self.fps, (w, h))
-        for f in frames:
-            writer.write(f)
-        writer.release()
-        clip_data["path"] = clip_path
+        h, w = frames[0].shape[:2]
+
+        sucesso = (
+            self._tentar_imageio_ffmpeg(clip_path, frames, w, h)
+            or self._tentar_cv2(clip_path, frames, w, h, "avc1")
+            or self._tentar_cv2(clip_path, frames, w, h, "mp4v")
+        )
+        if not sucesso:
+            logger.warning(
+                "Não foi possível gravar o clip de evidência em %s com nenhum "
+                "dos codecs disponíveis (imageio-ffmpeg/libx264, cv2/avc1, cv2/mp4v).",
+                clip_path,
+            )
+            clip_data["path"] = None
 
         with self._lock:
             self._pending = [c for c in self._pending if c.get("id") != clip_data.get("id")]
+
+    def _clip_valido(self, clip_path: str) -> bool:
+        """Um writer 'aberto' pode mentir; a validação real é reabrir e ler um quadro.
+
+        Tamanho de arquivo não serve de critério: um clip real bem comprimido
+        (pouca textura) pode sair com poucas centenas de bytes e ser perfeitamente
+        legível, enquanto um clip corrompido pode ter tamanho não-trivial mesmo
+        sem conter vídeo decodificável.
+        """
+        if not os.path.exists(clip_path) or os.path.getsize(clip_path) <= 0:
+            return False
+
+        cap = None
+        try:
+            cap = cv2.VideoCapture(clip_path)
+            if not cap.isOpened():
+                return False
+            ok, _ = cap.read()
+            if not ok:
+                return False
+            if cap.get(cv2.CAP_PROP_FRAME_COUNT) < 1:
+                return False
+            return True
+        except Exception:
+            return False
+        finally:
+            if cap is not None:
+                cap.release()
+
+    def _descartar_clip_invalido(self, clip_path: str, motivo: str):
+        if os.path.exists(clip_path):
+            try:
+                os.remove(clip_path)
+            except OSError:
+                pass
+        logger.warning("Tentativa de gravação de clip descartada (%s): %s", motivo, clip_path)
+
+    def _tentar_imageio_ffmpeg(self, clip_path: str, frames: list, w: int, h: int) -> bool:
+        """Tentativa 1: imageio-ffmpeg com libx264 — único codec que garante MP4 tocável em navegador."""
+        try:
+            import imageio_ffmpeg
+        except ImportError:
+            logger.warning("imageio-ffmpeg não instalado — pulando para cv2/avc1.")
+            return False
+
+        try:
+            escritor = imageio_ffmpeg.write_frames(
+                clip_path, (w, h), fps=self.fps, codec="libx264",
+            )
+            escritor.send(None)
+            for f in frames:
+                rgb = np.ascontiguousarray(f[:, :, ::-1])  # BGR (cv2) → RGB
+                escritor.send(rgb)
+            escritor.close()
+        except Exception:
+            logger.warning(
+                "Falha ao gravar clip com imageio-ffmpeg/libx264 em %s.",
+                clip_path, exc_info=True,
+            )
+            return False
+
+        if self._clip_valido(clip_path):
+            logger.info("Clip gravado com imageio-ffmpeg (libx264): %s", clip_path)
+            return True
+        self._descartar_clip_invalido(clip_path, "imageio-ffmpeg produziu arquivo vazio/corrompido")
+        return False
+
+    def _tentar_cv2(self, clip_path: str, frames: list, w: int, h: int, fourcc_str: str) -> bool:
+        """Tentativas 2 e 3: cv2.VideoWriter — writer.isOpened() não é confiável, validamos pelo arquivo."""
+        try:
+            writer = cv2.VideoWriter(clip_path, cv2.VideoWriter_fourcc(*fourcc_str), self.fps, (w, h))
+            if writer.isOpened():
+                for f in frames:
+                    writer.write(f)
+            writer.release()
+        except Exception:
+            logger.warning(
+                "Falha ao gravar clip com cv2/%s em %s.",
+                fourcc_str, clip_path, exc_info=True,
+            )
+            return False
+
+        if self._clip_valido(clip_path):
+            logger.info("Clip gravado com cv2 (%s): %s", fourcc_str, clip_path)
+            return True
+        self._descartar_clip_invalido(
+            clip_path, f"cv2/{fourcc_str} produziu arquivo vazio/corrompido (isOpened não confiável)"
+        )
+        return False
 
     def _draw_overlay(self, frame, infracao: dict):
         """Adiciona barra de status e destaque do veículo no screenshot."""

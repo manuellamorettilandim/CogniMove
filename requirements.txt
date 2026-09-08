@@ -5,6 +5,7 @@
 ultralytics>=8.0.0          # YOLOv8 + ByteTrack (rastreamento incluído)
 opencv-python>=4.8.0        # Processamento de vídeo e imagem
 numpy>=1.24.0               # Operações matriciais
+imageio-ffmpeg>=0.4.9       # Gravação de clipes MP4 (H.264) sem depender de codec do sistema
 
 # ── Dashboard web (Flask legado) ──────────────────────────────
 flask>=3.0.0                # Servidor web + streaming MJPEG + SSE

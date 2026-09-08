@@ -6,6 +6,8 @@ de arrays NumPy em clip_data pendentes.
 """
 from __future__ import annotations
 
+import os
+import cv2
 import time
 import tempfile
 import numpy as np
@@ -46,6 +48,82 @@ def test_remocao_clip_data_com_numpy_arrays_nao_lanca_value_error():
 
     assert len(pending) == 1
     assert pending[0]["id"] == 2
+
+
+def test_registrar_devolve_caminho_mp4_do_clip_e_nao_pendente():
+    """
+    Valida que registrar() já devolve o caminho real do clip (determinístico,
+    calculado a partir de tipo/ts/track_id) em vez da string "pendente" —
+    esse valor é o que acaba gravado na coluna `clip` do CSV de relatório.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        gerenciador = GerenciadorEvidencias(
+            output_dir=tmpdir,
+            fps=10.0,
+            buffer_seconds=0.1,
+            post_seconds=0.1,
+        )
+
+        dummy_frame = np.zeros((120, 160, 3), dtype=np.uint8)
+        inf = {"tipo": "AVANCO_SINAL_VERMELHO", "track_id": 7, "descricao": "Teste"}
+
+        resultado = gerenciador.registrar(inf, dummy_frame)
+
+        assert resultado["clip"] != "pendente"
+        assert resultado["clip"].endswith(".mp4")
+        assert os.path.dirname(resultado["clip"]) == gerenciador.clips_dir
+
+
+def test_save_clip_com_quadros_sinteticos_gera_arquivo_valido():
+    """
+    Grava um clip curto a partir de quadros sintéticos (numpy, sem vídeo real
+    nem YOLO) e confirma que o arquivo final abre com cv2.VideoCapture e devolve
+    ao menos um quadro legível — ou seja, que a cascata imageio-ffmpeg → cv2/avc1
+    → cv2/mp4v produziu um MP4 de verdade, não um arquivo vazio/corrompido como
+    o antigo mp4v isolado. Tamanho de arquivo não é usado como critério: um clip
+    válido bem comprimido pode ter poucas centenas de bytes.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        gerenciador = GerenciadorEvidencias(
+            output_dir=tmpdir,
+            fps=10.0,
+            buffer_seconds=0.3,
+            post_seconds=0.3,
+        )
+
+        # Quadros com ruído aleatório: quadros totalmente pretos comprimem
+        # demais e poderiam ficar abaixo do limiar mesmo sendo válidos.
+        rng = np.random.default_rng(42)
+        frame = rng.integers(0, 256, size=(240, 352, 3), dtype=np.uint8)
+
+        for _ in range(3):
+            gerenciador.push_frame(frame)
+
+        inf = {"tipo": "INVASAO_FAIXA", "track_id": 99, "descricao": "Teste clip sintético"}
+        resultado = gerenciador.registrar(inf, frame)
+
+        for _ in range(6):
+            gerenciador.push_frame(frame)
+            time.sleep(0.05)
+
+        deadline = time.time() + 5.0
+        while time.time() < deadline:
+            with gerenciador._lock:
+                if len(gerenciador._pending) == 0:
+                    break
+            time.sleep(0.05)
+
+        clip_path = resultado["clip"]
+        assert os.path.exists(clip_path), f"Clip não foi criado em {clip_path}"
+
+        cap = cv2.VideoCapture(clip_path)
+        try:
+            assert cap.isOpened(), f"Clip em {clip_path} não abre com cv2.VideoCapture"
+            ok, quadro = cap.read()
+            assert ok, f"Clip em {clip_path} não devolveu um quadro legível"
+            assert quadro is not None
+        finally:
+            cap.release()
 
 
 def test_multiplas_infracoes_simultaneas_limpam_pending():

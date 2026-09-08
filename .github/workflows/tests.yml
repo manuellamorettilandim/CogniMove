@@ -22,7 +22,7 @@ jobs:
       - name: Instalar Dependências de Teste
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pandas plotly streamlit opencv-python-headless holidays requests
+          pip install pytest pandas plotly streamlit opencv-python-headless holidays requests imageio-ffmpeg
 
       - name: Executar Testes com Pytest
         run: |
