@@ -260,24 +260,23 @@ def montar_resumo_contribuicoes(resultado_causa: dict, contexto: dict | None = N
     itens_evidencia = []
 
     for item in contribuicoes:
-        if isinstance(item, (list, tuple)) and len(item) >= 3:
-            fonte, causa, pts = item[0], item[1], item[2]
-            proc_causa = extrair_procedencia_segura(str(causa), tipo="causa")
-            selo_causa = formatar_selo_procedencia(proc_causa)
-            pontos_val = float(pts)
-            pts_str = f"+{pontos_val * 100:.0f} pts" if pontos_val >= 0 else f"{pontos_val * 100:.0f} pts"
+        fonte, causa, pts = item["fonte"], item["causa"], item["pontos"]
+        proc_causa = extrair_procedencia_segura(str(causa), tipo="causa")
+        selo_causa = formatar_selo_procedencia(proc_causa)
+        pontos_val = float(pts)
+        pts_str = f"+{pontos_val * 100:.0f} pts" if pontos_val >= 0 else f"{pontos_val * 100:.0f} pts"
 
-            d = {
-                "fonte": str(fonte),
-                "causa": str(causa),
-                "pontos": pontos_val,
-                "pontos_formatado": pts_str,
-                "selo_causa": selo_causa,
-            }
-            if fonte == "contexto":
-                itens_contexto.append(d)
-            elif fonte == "evidencia":
-                itens_evidencia.append(d)
+        d = {
+            "fonte": str(fonte),
+            "causa": str(causa),
+            "pontos": pontos_val,
+            "pontos_formatado": pts_str,
+            "selo_causa": selo_causa,
+        }
+        if fonte == "contexto":
+            itens_contexto.append(d)
+        elif fonte == "evidencia":
+            itens_evidencia.append(d)
 
     # Modificadores de contexto ativos com seus selos de modificador
     modificadores_ativos = []
