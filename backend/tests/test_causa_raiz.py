@@ -218,3 +218,95 @@ def test_desempate_deterministico_em_probabilidades_iguais(motor):
         assert res1["confianca"] == res2["confianca"] == 0.45
     finally:
         MotorCausaRaiz.TABELA_PROBABILIDADES_BASE = original_base
+
+
+# ── Separação contexto vs. evidência (MODIFICADORES_CONTEXTO / _EVIDENCIA) ──
+
+
+def test_calcular_probabilidades_sem_evidencias_retrocompativel(motor, contexto_vazio):
+    """Chamar calcular_probabilidades sem o argumento evidencias continua
+    funcionando exatamente como antes (retrocompatibilidade)."""
+    res = motor.calcular_probabilidades("AVANCO_SINAL_VERMELHO", contexto_vazio)
+
+    assert res["causa_principal"] == Causa.TEMPO_SEMAFORICO_INADEQUADO.value
+    assert abs(sum(res["distribuicao"].values()) - 1.0) < 1e-9
+    assert res["contribuicoes"] == []
+    assert res["origem"] == "nenhuma"
+
+
+def test_distribuicao_base_soma_um_e_nao_e_afetada_por_contexto_ou_evidencia(motor):
+    """distribuicao_base soma 1.0 e permanece igual independentemente de
+    contexto/evidências passados."""
+    infracao = "AVANCO_SINAL_VERMELHO"
+    ctx_vazio = GerenciadorContextoUrbano().obter_contexto_atual()
+    res_neutro = motor.calcular_probabilidades(infracao, ctx_vazio)
+
+    gerenciador = GerenciadorContextoUrbano()
+    gerenciador.atualizar_contexto(chuva_forte=True, horario_pico=True)
+    ctx_ativo = gerenciador.obter_contexto_atual()
+    res_ativo = motor.calcular_probabilidades(
+        infracao, ctx_ativo, evidencias={"qualquer_flag": True}
+    )
+
+    soma = sum(res_neutro["distribuicao_base"].values())
+    assert abs(soma - 1.0) < 1e-9
+    assert res_neutro["distribuicao_base"] == res_ativo["distribuicao_base"]
+    assert res_neutro["distribuicao_base"] == MotorCausaRaiz.TABELA_PROBABILIDADES_BASE[infracao]
+
+
+def test_contribuicoes_registra_fonte_contexto_e_evidencia(motor):
+    """contribuicoes contém exatamente os modificadores ativos em contexto e
+    evidências, com a fonte correta ('contexto' ou 'evidencia')."""
+    infracao = "AVANCO_SINAL_VERMELHO"
+    gerenciador = GerenciadorContextoUrbano()
+    gerenciador.atualizar_contexto(chuva_forte=True, horario_pico=True)
+    ctx = gerenciador.obter_contexto_atual()
+
+    # MODIFICADORES_EVIDENCIA ainda está vazio nesta etapa do projeto; popula
+    # temporariamente para exercitar o caminho de evidência.
+    original_evidencia = MotorCausaRaiz.MODIFICADORES_EVIDENCIA
+    try:
+        MotorCausaRaiz.MODIFICADORES_EVIDENCIA = {
+            "veiculo_parado_na_faixa": [(Causa.CONDUTA_DO_CONDUTOR.value, 0.10)],
+            "evidencia_inativa": [(Causa.CONGESTIONAMENTO.value, 0.50)],
+        }
+        res = motor.calcular_probabilidades(
+            infracao,
+            ctx,
+            evidencias={"veiculo_parado_na_faixa": True, "evidencia_inativa": False},
+        )
+    finally:
+        MotorCausaRaiz.MODIFICADORES_EVIDENCIA = original_evidencia
+
+    esperado = {
+        ("contexto", Causa.SINALIZACAO_POUCO_VISIVEL.value, 0.25),
+        ("contexto", Causa.CONGESTIONAMENTO.value, 0.20),
+        ("evidencia", Causa.CONDUTA_DO_CONDUTOR.value, 0.10),
+    }
+    assert set(res["contribuicoes"]) == esperado
+    assert len(res["contribuicoes"]) == len(esperado)
+
+
+def test_calcular_com_contrafactual_contexto_vazio_nao_muda_causa(motor):
+    """Com contexto e evidências vazios, real e neutro são iguais e
+    mudou_causa é False."""
+    resultado = motor.calcular_com_contrafactual("AVANCO_SINAL_VERMELHO", {}, {})
+
+    assert resultado["real"] == resultado["neutro"]
+    assert resultado["mudou_causa"] is False
+
+
+def test_calcular_com_contrafactual_contexto_forte_muda_causa(motor):
+    """Um contexto forte o suficiente (horário de pico em AVANCO_SINAL_VERMELHO,
+    que eleva Congestionamento acima de Tempo semafórico inadequado) faz
+    mudou_causa ser True."""
+    infracao = "AVANCO_SINAL_VERMELHO"
+    gerenciador = GerenciadorContextoUrbano()
+    gerenciador.set_horario_pico(True)
+    ctx = gerenciador.obter_contexto_atual()
+
+    resultado = motor.calcular_com_contrafactual(infracao, ctx)
+
+    assert resultado["neutro"]["causa_principal"] == Causa.TEMPO_SEMAFORICO_INADEQUADO.value
+    assert resultado["real"]["causa_principal"] == Causa.CONGESTIONAMENTO.value
+    assert resultado["mudou_causa"] is True

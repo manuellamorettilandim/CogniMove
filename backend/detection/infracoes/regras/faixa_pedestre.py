@@ -46,34 +46,58 @@ class RegraFaixaPedestre:
         self.polygons = polygons or []
         self.cooldown_frames = cooldown_frames
         self._cooldown: dict[int, int] = {}
+        # Por track_id, conjunto de nomes de polígonos em que o veículo já
+        # estava no frame anterior — permite tratar a invasão como evento de
+        # entrada (fora → dentro), em vez de estado ("está dentro?").
+        self._dentro_de: dict[int, set[str]] = {}
 
     def checar(self, frame, tracks: list, light_state: str, frame_idx: int) -> list[dict]:
         """Verifica infrações de invasão de faixa nos tracks ativos."""
         infractions = []
+        ids_ativos: set[int] = set()
+
         for track in tracks:
             if not track.active or track.current is None:
                 continue
-            if track.id in self._cooldown:
-                if frame_idx - self._cooldown[track.id] < self.cooldown_frames:
-                    continue
+            ids_ativos.add(track.id)
 
-            desc = (
-                self._check_line_crossing(track) or
-                self._check_polygon_invasion(track.current["bottom_pt"])
+            bottom_pt = track.current["bottom_pt"]
+            polys_agora  = self._polygons_containing(bottom_pt)
+            polys_antes  = self._dentro_de.get(track.id, set())
+            polys_entrando = polys_agora - polys_antes
+            self._dentro_de[track.id] = polys_agora
+
+            for nome_poly in polys_entrando:
+                infractions.append(self._montar_infracao(track, frame_idx, f"Invasão de {nome_poly}"))
+
+            em_cooldown = (
+                track.id in self._cooldown and
+                frame_idx - self._cooldown[track.id] < self.cooldown_frames
             )
-            if desc:
-                self._cooldown[track.id] = frame_idx
-                infractions.append({
-                    "tipo":      "INVASAO_FAIXA",
-                    "descricao": desc,
-                    "track_id":  track.id,
-                    "classe":    track.cls_name,
-                    "bbox":      track.current["bbox"],
-                    "frame":     frame_idx,
-                    "timestamp": datetime.datetime.now().isoformat(),
-                    "confianca": round(track.current.get("conf", 0.0), 3),
-                })
+            if not em_cooldown:
+                desc_linha = self._check_line_crossing(track)
+                if desc_linha:
+                    self._cooldown[track.id] = frame_idx
+                    infractions.append(self._montar_infracao(track, frame_idx, desc_linha))
+
+        # Descarta o estado de tracks que não estão mais ativos, para os
+        # dicionários não crescerem sem limite em execuções longas.
+        self._dentro_de = {tid: v for tid, v in self._dentro_de.items() if tid in ids_ativos}
+        self._cooldown  = {tid: v for tid, v in self._cooldown.items()  if tid in ids_ativos}
+
         return infractions
+
+    def _montar_infracao(self, track, frame_idx: int, desc: str) -> dict:
+        return {
+            "tipo":      "INVASAO_FAIXA",
+            "descricao": desc,
+            "track_id":  track.id,
+            "classe":    track.cls_name,
+            "bbox":      track.current["bbox"],
+            "frame":     frame_idx,
+            "timestamp": datetime.datetime.now().isoformat(),
+            "confianca": round(track.current.get("conf", 0.0), 3),
+        }
 
     def _check_line_crossing(self, track) -> str | None:
         if track.previous is None:
@@ -85,11 +109,13 @@ class RegraFaixaPedestre:
                 return f"Cruzou {line.get('name', 'linha de limite')}"
         return None
 
-    def _check_polygon_invasion(self, bottom_pt) -> str | None:
+    def _polygons_containing(self, bottom_pt) -> set[str]:
+        """Retorna os nomes dos polígonos que contêm bottom_pt no frame atual."""
+        nomes = set()
         for poly in self.polygons:
             if point_in_polygon(bottom_pt, poly.get("points", [])):
-                return f"Invasão de {poly.get('name', 'área protegida')}"
-        return None
+                nomes.add(poly.get("name", "área protegida"))
+        return nomes
 
     # ── Desenho ──────────────────────────────────────────────────────────────
 

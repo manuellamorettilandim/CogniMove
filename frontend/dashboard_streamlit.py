@@ -53,6 +53,11 @@ from utils_dashboard import (
     obter_causa_predominante,
     resumir_contexto,
     traduzir_avisos_contexto,
+    formatar_selo_procedencia,
+    formatar_contrafactual_diagnostico,
+    montar_tabela_procedencia_causas,
+    montar_resumo_contribuicoes,
+    extrair_procedencia_segura,
 )
 
 
@@ -148,6 +153,50 @@ st.markdown("""
         margin-top: 10px;
         color: #7ee787;
         font-size: 0.9rem;
+    }
+
+    /* Painel de Simulação "E se?" */
+    .sim-box {
+        background: linear-gradient(145deg, #1a1040, #13102b);
+        border: 1px solid rgba(124, 77, 255, 0.55);
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin-top: 6px;
+        color: #ce93d8;
+        font-size: 0.9rem;
+    }
+    .sim-result {
+        background: rgba(124, 77, 255, 0.12);
+        border-left: 3px solid #7c4dff;
+        border-radius: 6px;
+        padding: 10px 14px;
+        margin-top: 10px;
+        color: #e1bee7;
+        font-size: 0.92rem;
+    }
+    .sim-label {
+        display: inline-block;
+        background: rgba(124, 77, 255, 0.25);
+        color: #ce93d8;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: 20px;
+        margin-bottom: 6px;
+    }
+    /* Banner de aviso de simulação (vídeo sintético) */
+    .sim-banner {
+        background: linear-gradient(90deg, rgba(255, 152, 0, 0.18) 0%, rgba(255, 193, 7, 0.12) 100%);
+        border: 1.5px solid rgba(255, 152, 0, 0.7);
+        border-radius: 8px;
+        padding: 10px 16px;
+        margin-bottom: 10px;
+        color: #ffcc02;
+        font-size: 0.88rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -336,6 +385,28 @@ def listar_presets() -> list[str]:
     return ["general"]
 
 
+def carregar_fonte_preset(nome_preset: str) -> str:
+    """Lê o campo 'fonte' do preset .json especificado.
+
+    Retorna:
+        "simulacao" se o campo indicar origem sintética,
+        "campo_real" (padrão seguro) se o campo ausente ou desconhecido,
+        ou o valor literal do campo caso seja outro valor futuro.
+
+    Nunca levanta exceção — presets antigos sem o campo recebem 'campo_real'.
+    """
+    try:
+        preset_path = _PRESETS / f"{nome_preset}.json"
+        if preset_path.is_file():
+            import json as _json
+            with open(preset_path, encoding="utf-8") as _f:
+                dados = _json.load(_f)
+            return str(dados.get("fonte", "campo_real"))
+    except Exception:
+        pass
+    return "campo_real"
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  CABEÇALHO
 # ══════════════════════════════════════════════════════════════════════════════
@@ -496,6 +567,17 @@ col_camera, col_analise = st.columns([1.6, 1.4])
 with col_camera:
     st.markdown("### 📹 Área 1: Simulador de Câmera Urbana")
     st.caption(f"Cruzamento selecionado: **{preset_escolhido.replace('_', ' ').title()}**")
+
+    # Aviso de simulação — exibido quando o preset usa material sintético (motor de jogo)
+    _fonte_preset = carregar_fonte_preset(preset_escolhido)
+    if _fonte_preset == "simulacao":
+        st.markdown(
+            "<div class='sim-banner'>"
+            "⚠️ <b>SIMULAÇÃO</b> — cena gerada em motor de jogo, usada para demonstração visual. "
+            "A detecção roda normalmente sobre este material sintético."
+            "</div>",
+            unsafe_allow_html=True,
+        )
 
     frame_placeholder = st.empty()
     alert_placeholder = st.empty()
@@ -686,11 +768,11 @@ with col_analise:
         # 4. Recomendações e Políticas Baseadas em Evidências (Seção 5 do artigo)
         st.markdown("#### 🏛️ Recomendações Urbanas Inteligentes (Apoio à Gestão)")
 
-        # Lógica explicativa baseada nas causas predominantes
-        if "causa_principal" in df.columns:
+        # Lógica explicativa baseada nas causas predominantes e análise contrafactual
+        if "causa_principal" in df.columns or "tipo" in df.columns:
             top_causa = obter_causa_predominante(df, default="")
             total_inf = len(df)
-            causa_count = (df["causa_principal"] == top_causa).sum() if top_causa else 0
+            causa_count = (df["causa_principal"] == top_causa).sum() if ("causa_principal" in df.columns and top_causa) else 0
             pct_top = int((causa_count / total_inf) * 100) if total_inf > 0 and top_causa else 0
 
             recs = RECOMENDACOES_POR_CAUSA
@@ -699,20 +781,246 @@ with col_analise:
                 nomes = ", ".join(c.value for c in causas_sem_recomendacao)
                 st.warning(f"⚠️ Causas sem recomendação cadastrada: {nomes}")
 
-            rec_texto = recs.get(top_causa, "Recomenda-se inspeção técnica no local para avaliação dos conflitos entre pedestres e veículos.")
+            rec_texto_fallback = recs.get(top_causa, "Recomenda-se inspeção técnica no local para avaliação dos conflitos entre pedestres e veículos.")
+
+            try:
+                # Determinar o tipo de infração representativo da via
+                tipo_infracao = None
+                if "tipo" in df.columns and not df["tipo"].dropna().empty:
+                    tipo_infracao = str(df["tipo"].mode().iloc[0])
+                else:
+                    tipo_infracao = "AVANCO_SINAL_VERMELHO"
+
+                ctx_atual = st.session_state.contexto.obter_contexto_atual()
+
+                # Análise contrafactual com transparência
+                res_cf = st.session_state.motor.calcular_com_contrafactual(tipo_infracao, ctx_atual)
+                diag_info = formatar_contrafactual_diagnostico(res_cf, limiar_diferenca_pct=5.0)
+
+                causa_vencedora_real = diag_info["causa_real"]
+                rec_texto = recs.get(causa_vencedora_real, rec_texto_fallback)
+
+                linha_real = diag_info["linha_real"]
+                linha_neutra = diag_info["linha_neutra"]
+
+                linhas_html = f"• <b>{linha_real}</b>"
+                if diag_info["mostrar_neutra"] and linha_neutra:
+                    linhas_html += f"<br>• <span style='color: #8b949e;'>{linha_neutra}</span>"
+
+                st.markdown(
+                    f'<div class="policy-box">'
+                    f'📌 <b>Diagnóstico Probabilístico (Causa-Raiz):</b><br>'
+                    f'{linhas_html}<br><br>'
+                    f'🛠️ <b>Intervenção Sugerida:</b> {rec_texto}'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+                # Expander com procedência técnica e separação de contexto vs evidência
+                with st.expander("🔍 De onde vêm estes números", expanded=False):
+                    resumo_contrib = montar_resumo_contribuicoes(res_cf.get("real", {}), contexto=ctx_atual)
+                    itens_ctx = resumo_contrib.get("contexto", [])
+                    itens_ev = resumo_contrib.get("evidencia", [])
+                    mods_ativos = resumo_contrib.get("modificadores_ativos", [])
+
+                    st.markdown("##### 📌 Fatores Ativos e Modificadores Aplicados")
+                    if mods_ativos or itens_ctx or itens_ev:
+                        if mods_ativos or itens_ctx:
+                            st.markdown("**🌐 Modificadores de Contexto Urbano (Hipótese Externa):**")
+                            for mod in mods_ativos:
+                                st.markdown(f"- **{mod['nome']}** — {mod['selo']}")
+                            for item in itens_ctx:
+                                st.markdown(f"  └ Impacto: **{item['pontos_formatado']}** na causa *\"{item['causa']}\"* ({item['selo_causa']})")
+
+                        if itens_ev:
+                            st.markdown("**🎯 Modificadores de Evidência da Cena (Medição Local):**")
+                            for item in itens_ev:
+                                st.markdown(f"- Impacto: **{item['pontos_formatado']}** na causa *\"{item['causa']}\"* ({item['selo_causa']})")
+                    else:
+                        st.info("Nenhum modificador de contexto ou evidência ativo no momento. As probabilidades refletem a distribuição base.")
+
+                    st.markdown("##### 📚 Tabela de Procedência e Distribuição")
+                    tab_causas = montar_tabela_procedencia_causas(res_cf.get("real", {}))
+                    if tab_causas:
+                        df_tab = pd.DataFrame(tab_causas)
+                        st.dataframe(df_tab, use_container_width=True, hide_index=True)
+
+            except Exception as e:
+                # Fallback seguro
+                st.markdown(
+                    f'<div class="policy-box">'
+                    f'📌 <b>Diagnóstico Sistêmico:</b> <b>{pct_top}%</b> dos eventos registrados nesta via estão vinculados a: <i>"{top_causa}"</i>.<br>'
+                    f'🛠️ <b>Intervenção Sugerida:</b> {rec_texto_fallback}'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+            # Rodapé de honestidade fixo visível sempre que a causa-raiz for exibida
+            st.caption(
+                "Estas probabilidades combinam fontes técnicas primárias (normas da CET-SP, "
+                "Instituto de Engenharia) com estimativas da equipe, claramente distinguidas "
+                "acima. Este é um sistema de apoio à decisão, não um veredito automático."
+            )
+
+        st.divider()
+
+        # ── 5. Painel "E se?" — simulação interativa de cenários ─────────────
+        st.markdown("#### 🧪 Explorar cenários (simulação, não altera o diagnóstico real)")
+        st.caption(
+            "Marque fatores hipotéticos e veja o que o motor de probabilidades responderia. "
+            "Estes controles são totalmente independentes do contexto consultado por data."
+        )
+
+        try:
+            # Tipo de infração representativo — mesmo critério do card real, mas isolado
+            _tipo_sim = "AVANCO_SINAL_VERMELHO"
+            if "tipo" in df.columns and not df["tipo"].dropna().empty:
+                _tipo_sim = str(df["tipo"].mode().iloc[0])
+
+            _sim_col1, _sim_col2 = st.columns(2)
+            with _sim_col1:
+                _sim_chuva   = st.toggle("🌧️ Chuva forte",   key="sim_chuva",   value=False)
+                _sim_pico    = st.toggle("🕐 Horário de pico", key="sim_pico",    value=False)
+                _sim_obra    = st.toggle("🚧 Obra viária",     key="sim_obra",    value=False)
+            with _sim_col2:
+                _sim_jogo    = st.toggle("⚽ Dia de jogo",     key="sim_jogo",    value=False)
+                _sim_feriado = st.toggle("🎉 Feriado",         key="sim_feriado", value=False)
+
+            # Monta contexto simulado local — nunca toca em st.session_state.contexto
+            _ctx_sim = {
+                "chuva_forte":  _sim_chuva,
+                "horario_pico": _sim_pico,
+                "obra_viaria":  _sim_obra,
+                "dia_jogo":     _sim_jogo,
+                "feriado":      _sim_feriado,
+                "fatores_ativos": [
+                    nome
+                    for chave, nome in [
+                        ("chuva_forte",  "Chuva Forte / Baixa Visibilidade"),
+                        ("horario_pico", "Horário de Pico"),
+                        ("obra_viaria",  "Obra Viária / Desvio"),
+                        ("dia_jogo",     "Dia de Jogo / Evento de Grande Porte"),
+                        ("feriado",      "Feriado"),
+                    ]
+                    if _ctx_sim.get(chave, False)  # avaliado após ctx_sim ser definido
+                ],
+            }
+            # Reconstruir fatores_ativos com o dict já montado
+            _ctx_sim["fatores_ativos"] = [
+                nome
+                for chave, nome in [
+                    ("chuva_forte",  "Chuva Forte / Baixa Visibilidade"),
+                    ("horario_pico", "Horário de Pico"),
+                    ("obra_viaria",  "Obra Viária / Desvio"),
+                    ("dia_jogo",     "Dia de Jogo / Evento de Grande Porte"),
+                    ("feriado",      "Feriado"),
+                ]
+                if _ctx_sim.get(chave, False)
+            ]
+
+            _res_sim = st.session_state.motor.calcular_probabilidades(_tipo_sim, _ctx_sim)
+            _causa_sim = _res_sim.get("causa_principal", "Desconhecida")
+            _pct_sim   = int(round(float(_res_sim.get("confianca", 0.0)) * 100))
+            _fatores_sim = _ctx_sim["fatores_ativos"]
+            _fatores_label = (
+                ", ".join(_fatores_sim) if _fatores_sim else "nenhum fator ativo"
+            )
+
+            # Linha de resultado simulado — mesma estrutura do card real, cor distinta
+            _sim_html = (
+                f"<span class='sim-label'>Resultado simulado</span><br>"
+                f"<b>Com [{_fatores_label}]:</b> {_causa_sim} — {_pct_sim}%"
+            )
+
+            # Segunda linha: comparação com base neutra
+            _res_sim_neutro = st.session_state.motor.calcular_probabilidades(_tipo_sim, {})
+            _causa_sim_neutra = _res_sim_neutro.get("causa_principal", "Desconhecida")
+            _pct_sim_neutra   = int(round(float(_res_sim_neutro.get("confianca", 0.0)) * 100))
+            _diff_sim = abs(_pct_sim - _pct_sim_neutra)
+            if _causa_sim != _causa_sim_neutra or _diff_sim >= 5:
+                _sim_html += (
+                    f"<br><span style='color:#9e9e9e;'>"
+                    f"Sem nenhum fator: {_causa_sim_neutra} — {_pct_sim_neutra}%"
+                    f"</span>"
+                )
 
             st.markdown(
-                f'<div class="policy-box">'
-                f'📌 <b>Diagnóstico Sistêmico:</b> <b>{pct_top}%</b> dos eventos registrados nesta via estão vinculados a: <i>"{top_causa}"</i>.<br>'
-                f'🛠️ <b>Intervenção Sugerida:</b> {rec_texto}'
-                f'</div>',
+                f"<div class='sim-result'>{_sim_html}</div>",
                 unsafe_allow_html=True,
             )
+
+        except Exception:
+            st.info("⚠️ Não foi possível simular o cenário. Tente iniciar o monitoramento primeiro.")
+
+        # ── 6. Tabela de Registros com Auditoria Humana (Seção 6 do artigo)
+        st.divider()
 
         # 5. Tabela de Registros com Auditoria Humana (Seção 6 do artigo)
         with st.expander("📋 Auditoria de Ocorrências e Evidências"):
             colunas_exibir = [c for c in ["timestamp", "tipo", "confianca", "causa_principal", "causa_confianca", "cenarios_ativos"] if c in df.columns]
             st.dataframe(df[colunas_exibir], use_container_width=True, height=220)
+
+            st.divider()
+            st.markdown("##### 🎬 Player de Evidências")
+
+            def _resolver_caminho_evidencia(caminho) -> Path | None:
+                """Resolve um caminho do CSV (pode ser relativo ou absoluto) contra a raiz do projeto."""
+                if not isinstance(caminho, str) or not caminho:
+                    return None
+                p = Path(caminho)
+                return p if p.is_absolute() else (_ROOT / p)
+
+            ocorrencias_com_clip = []
+            if "clip" in df.columns:
+                for idx, linha in df.iterrows():
+                    clip_val = linha.get("clip")
+                    if not isinstance(clip_val, str) or not clip_val or clip_val == "pendente":
+                        continue
+                    clip_path = _resolver_caminho_evidencia(clip_val)
+                    if clip_path is not None and clip_path.is_file():
+                        ocorrencias_com_clip.append((idx, linha, clip_path))
+
+            if not ocorrencias_com_clip:
+                st.info("Ainda não há evidências (clipes) gravadas nesta sessão.")
+            else:
+                def _rotulo_ocorrencia(item) -> str:
+                    idx, linha, _ = item
+                    tipo_legivel = str(linha.get("tipo", "")).replace("_", " ").title()
+                    ts_fmt = pd.to_datetime(linha.get("timestamp"), errors="coerce")
+                    ts_str = ts_fmt.strftime("%H:%M:%S") if pd.notnull(ts_fmt) else str(linha.get("timestamp", ""))
+                    causa = linha.get("causa_principal") or "Em investigação"
+                    return f"{idx} — {tipo_legivel} — {ts_str} — {causa}"
+
+                opcoes = {_rotulo_ocorrencia(item): item for item in ocorrencias_com_clip}
+                rotulo_sel = st.selectbox(
+                    "Selecione a infração para assistir a evidência:",
+                    list(opcoes.keys()),
+                )
+                _, linha_sel, clip_path_sel = opcoes[rotulo_sel]
+
+                col_video, col_foto = st.columns([2, 1])
+                with col_video:
+                    st.video(str(clip_path_sel))
+                    st.download_button(
+                        "⬇️ Baixar clipe",
+                        data=clip_path_sel.read_bytes(),
+                        file_name=clip_path_sel.name,
+                        mime="video/mp4",
+                    )
+                with col_foto:
+                    screenshot_path = _resolver_caminho_evidencia(linha_sel.get("screenshot")) if "screenshot" in df.columns else None
+                    if screenshot_path is not None and screenshot_path.is_file():
+                        st.image(str(screenshot_path), caption="Screenshot da infração", use_container_width=True)
+
+                confianca_ia = linha_sel.get("confianca")
+                confianca_causa = linha_sel.get("causa_confianca")
+                st.caption(
+                    f"**Tipo:** {str(linha_sel.get('tipo', '')).replace('_', ' ').title()}  |  "
+                    f"**Confiança da IA:** {f'{float(confianca_ia):.0%}' if pd.notnull(confianca_ia) else 'N/A'}  |  "
+                    f"**Causa-raiz:** {linha_sel.get('causa_principal') or 'N/A'}  |  "
+                    f"**Confiança da causa:** {f'{float(confianca_causa):.0%}' if pd.notnull(confianca_causa) else 'N/A'}  |  "
+                    f"**Cenários ativos:** {linha_sel.get('cenarios_ativos') or 'Nenhum'}"
+                )
 
 
 # ══════════════════════════════════════════════════════════════════════════════

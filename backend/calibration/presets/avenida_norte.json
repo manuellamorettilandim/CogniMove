@@ -1,5 +1,6 @@
 {
   "name": "avenida_norte",
+  "fonte": "campo_real",
   "ref_width": 480,
   "ref_height": 270,
   "lines": [

@@ -42,8 +42,9 @@ def test_modificadores_sem_causas_orfas():
         for sub_tabela in MotorCausaRaiz.TABELA_PROBABILIDADES_BASE.values()
         for causa in sub_tabela.keys()
     }
-    for cenario, (causa, _) in MotorCausaRaiz.MODIFICADORES.items():
-        assert causa in causas_base, f"Causa órfã '{causa}' encontrada em '{cenario}'"
+    for cenario, ajustes in MotorCausaRaiz.MODIFICADORES.items():
+        for causa, _ in ajustes:
+            assert causa in causas_base, f"Causa órfã '{causa}' encontrada em '{cenario}'"
     print("[OK] MODIFICADORES consistentes com TABELA_PROBABILIDADES_BASE!")
 
 
@@ -53,7 +54,7 @@ def test_validacao_detecta_causa_orfa():
 
     original = MotorCausaRaiz.MODIFICADORES.copy()
     try:
-        MotorCausaRaiz.MODIFICADORES["cenario_invalido"] = ("Causa Que Nao Existe", 0.30)
+        MotorCausaRaiz.MODIFICADORES["cenario_invalido"] = [("Causa Que Nao Existe", 0.30)]
         try:
             _validar_consistencia_modificadores()
             raise AssertionError("Deveria ter lançado AssertionError para causa órfã!")
@@ -62,6 +63,7 @@ def test_validacao_detecta_causa_orfa():
             print("[OK] Validação de causa órfã interceptou erro com sucesso:", e)
     finally:
         MotorCausaRaiz.MODIFICADORES = original
+
 
 
 def test_chuva_forte_modificador():

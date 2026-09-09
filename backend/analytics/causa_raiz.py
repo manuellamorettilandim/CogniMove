@@ -57,11 +57,11 @@ class MotorCausaRaiz:
         },
     }
 
-    # ── Modificadores contextuais ─────────────────────────────────────────────
+    # ── Modificadores de contexto (hipótese externa: clima, calendário, fluxo) ──
     # Cada modificador indica: (causa_afetada, incremento_absoluto)
     # Após aplicar, todas as probabilidades são renormalizadas para somar 1.0.
 
-    MODIFICADORES: dict[str, list[tuple[str, float]]] = {
+    MODIFICADORES_CONTEXTO: dict[str, list[tuple[str, float]]] = {
         "chuva_forte":   [(Causa.SINALIZACAO_POUCO_VISIVEL.value, 0.25)],
         "horario_pico":  [(Causa.CONGESTIONAMENTO.value,          0.20)],
         "obra_viaria":   [(Causa.SINALIZACAO_POUCO_VISIVEL.value, 0.15)],
@@ -69,25 +69,48 @@ class MotorCausaRaiz:
         "feriado":       [(Causa.CONDUTA_DO_CONDUTOR.value,       0.10)],
     }
 
+    # Alias retrocompatível: código existente que importa/usa MODIFICADORES
+    # continua funcionando sem alteração.
+    MODIFICADORES = MODIFICADORES_CONTEXTO
+
+    # ── Modificadores de evidência (o que foi medido na cena) ───────────────────
+    # Mesma estrutura de MODIFICADORES_CONTEXTO. Vazio por enquanto — será
+    # populado em um passo futuro.
+    MODIFICADORES_EVIDENCIA: dict[str, list[tuple[str, float]]] = {}
+
     # ── API pública ───────────────────────────────────────────────────────────
 
     def calcular_probabilidades(
         self,
         tipo_infracao: str,
         contexto: dict,
+        evidencias: dict | None = None,
     ) -> dict:
-        """Calcula as causas prováveis para uma infração dada o contexto.
+        """Calcula as causas prováveis para uma infração dado o contexto e,
+        opcionalmente, as evidências medidas na cena.
 
         Args:
             tipo_infracao: chave da infração (ex: "AVANCO_SINAL_VERMELHO").
-            contexto:      dict retornado por GerenciadorContextoUrbano.obter_contexto_atual().
+            contexto:      dict retornado por GerenciadorContextoUrbano.obter_contexto_atual()
+                           (hipótese externa: chuva, pico, obra, jogo, feriado).
+            evidencias:    dict opcional no mesmo formato de flags que contexto,
+                           mas representando o que foi medido na cena. Quando
+                           None, nenhum modificador de evidência é aplicado.
 
         Returns:
             dict com:
-              - "causa_principal": str — nome da causa com maior probabilidade
-              - "confianca":      float — probabilidade da causa principal (0-1)
-              - "distribuicao":   dict[str, float] — todas as causas com suas %
-              - "fatores_ativos": list[str] — nomes legíveis dos cenários ligados
+              - "causa_principal":  str — nome da causa com maior probabilidade
+              - "confianca":        float — probabilidade da causa principal (0-1)
+              - "distribuicao":     dict[str, float] — todas as causas com suas %
+                                     após modificadores de contexto e evidência
+              - "fatores_ativos":   list[str] — nomes legíveis dos cenários ligados
+              - "distribuicao_base": dict[str, float] — distribuição ANTES de
+                                     qualquer modificador de contexto/evidência
+              - "contribuicoes":    list[tuple[str, str, float]] — cada modificador
+                                     efetivamente aplicado, como (fonte, causa, pontos),
+                                     fonte em {"contexto", "evidencia"}
+              - "origem":           str — o que moveu a causa vencedora:
+                                     "contexto", "evidencia", "ambos" ou "nenhuma"
         """
         base = self.TABELA_PROBABILIDADES_BASE.get(tipo_infracao)
         if base is None:
@@ -97,31 +120,77 @@ class MotorCausaRaiz:
                 tipo_infracao,
             )
             return {
-                "causa_principal": "Desconhecida",
-                "confianca":       0.0,
-                "distribuicao":    {},
-                "fatores_ativos":  contexto.get("fatores_ativos", []),
+                "causa_principal":   "Desconhecida",
+                "confianca":         0.0,
+                "distribuicao":      {},
+                "fatores_ativos":    contexto.get("fatores_ativos", []),
+                "distribuicao_base": {},
+                "contribuicoes":     [],
+                "origem":            "nenhuma",
             }
 
+        evidencias = evidencias or {}
         probs = copy.deepcopy(base)
+        contribuicoes: list[tuple[str, str, float]] = []
 
-        # Aplicar modificadores dos cenários ativos
-        for chave_contexto, ajustes in self.MODIFICADORES.items():
+        # Aplicar modificadores de contexto (hipótese externa)
+        for chave_contexto, ajustes in self.MODIFICADORES_CONTEXTO.items():
             if contexto.get(chave_contexto, False):
                 for causa, incremento in ajustes:
                     probs[causa] = probs.get(causa, 0.0) + incremento
+                    contribuicoes.append(("contexto", causa, incremento))
+
+        # Aplicar modificadores de evidência (o que foi medido na cena)
+        for chave_evidencia, ajustes in self.MODIFICADORES_EVIDENCIA.items():
+            if evidencias.get(chave_evidencia, False):
+                for causa, incremento in ajustes:
+                    probs[causa] = probs.get(causa, 0.0) + incremento
+                    contribuicoes.append(("evidencia", causa, incremento))
 
         # Normalizar para somar 1.0
         probs = self._normalizar(probs)
 
         # Determinar a causa principal
         causa_top = max(probs.items(), key=lambda kv: (kv[1], kv[0]))[0]
+        origem = self._determinar_origem(causa_top, contribuicoes)
 
         return {
-            "causa_principal": causa_top,
-            "confianca":       round(probs[causa_top], 4),
-            "distribuicao":    {k: round(v, 4) for k, v in probs.items()},
-            "fatores_ativos":  contexto.get("fatores_ativos", []),
+            "causa_principal":   causa_top,
+            "confianca":         round(probs[causa_top], 4),
+            "distribuicao":      {k: round(v, 4) for k, v in probs.items()},
+            "fatores_ativos":    contexto.get("fatores_ativos", []),
+            "distribuicao_base": {k: round(v, 4) for k, v in base.items()},
+            "contribuicoes":     contribuicoes,
+            "origem":            origem,
+        }
+
+    def calcular_com_contrafactual(
+        self,
+        tipo_infracao: str,
+        contexto: dict,
+        evidencias: dict | None = None,
+    ) -> dict:
+        """Compara o resultado real com o que se obteria sem nenhum fator externo.
+
+        Roda calcular_probabilidades duas vezes — uma com o contexto/evidências
+        completos ("real") e outra com contexto e evidências vazios ("neutro") —
+        para isolar o quanto os modificadores externos mudaram o diagnóstico.
+
+        Args:
+            tipo_infracao: chave da infração (ex: "AVANCO_SINAL_VERMELHO").
+            contexto:      dict de contexto urbano completo.
+            evidencias:    dict opcional de evidências da cena.
+
+        Returns:
+            dict com "real", "neutro" (ambos no formato de calcular_probabilidades)
+            e "mudou_causa" (bool, True se a causa vencedora diverge entre os dois).
+        """
+        real = self.calcular_probabilidades(tipo_infracao, contexto, evidencias)
+        neutro = self.calcular_probabilidades(tipo_infracao, {}, {})
+        return {
+            "real":        real,
+            "neutro":      neutro,
+            "mudou_causa": real["causa_principal"] != neutro["causa_principal"],
         }
 
     # ── Utilitários internos ──────────────────────────────────────────────────
@@ -133,6 +202,23 @@ class MotorCausaRaiz:
         if total <= 0:
             return probs
         return {k: v / total for k, v in probs.items()}
+
+    @staticmethod
+    def _determinar_origem(
+        causa_top: str,
+        contribuicoes: list[tuple[str, str, float]],
+    ) -> str:
+        """Determina qual fonte (contexto, evidência, ambos ou nenhuma) moveu
+        a causa vencedora, a partir do registro de contribuições aplicadas.
+        """
+        fontes = {fonte for fonte, causa, _ in contribuicoes if causa == causa_top}
+        if fontes == {"contexto"}:
+            return "contexto"
+        if fontes == {"evidencia"}:
+            return "evidencia"
+        if fontes == {"contexto", "evidencia"}:
+            return "ambos"
+        return "nenhuma"
 
     # ── Representação ─────────────────────────────────────────────────────────
 
@@ -158,21 +244,28 @@ def validar_tabela_base() -> None:
 
 
 def _validar_consistencia_modificadores() -> None:
-    """Garante que toda causa referenciada em MODIFICADORES existe em pelo menos
-    uma entrada de TABELA_PROBABILIDADES_BASE.
+    """Garante que toda causa referenciada em MODIFICADORES_CONTEXTO ou
+    MODIFICADORES_EVIDENCIA existe em pelo menos uma entrada de
+    TABELA_PROBABILIDADES_BASE.
     """
     causas_base: set[str] = {
         causa
         for sub_tabela in MotorCausaRaiz.TABELA_PROBABILIDADES_BASE.values()
         for causa in sub_tabela.keys()
     }
-    for cenario, ajustes in MotorCausaRaiz.MODIFICADORES.items():
-        for causa, _ in ajustes:
-            if causa not in causas_base:
-                raise AssertionError(
-                    f"Causa órfã detectada no modificador '{cenario}': '{causa}' "
-                    f"não existe em nenhuma entrada de TABELA_PROBABILIDADES_BASE."
-                )
+    tabelas_modificadores = {
+        "MODIFICADORES_CONTEXTO": MotorCausaRaiz.MODIFICADORES_CONTEXTO,
+        "MODIFICADORES_EVIDENCIA": MotorCausaRaiz.MODIFICADORES_EVIDENCIA,
+    }
+    for nome_tabela, tabela in tabelas_modificadores.items():
+        for cenario, ajustes in tabela.items():
+            for causa, _ in ajustes:
+                if causa not in causas_base:
+                    raise AssertionError(
+                        f"Causa órfã detectada no modificador '{cenario}' "
+                        f"({nome_tabela}): '{causa}' não existe em nenhuma "
+                        f"entrada de TABELA_PROBABILIDADES_BASE."
+                    )
 
 
 # Validação executada na inicialização do módulo
