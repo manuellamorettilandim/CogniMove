@@ -11,6 +11,9 @@ backend/training/datasets/
 backend/outputs/
 backend/outputs/uploads/
 
+# Vídeos anotados gerados localmente (--salvar-video)
+videos_treinados/
+
 # Arquivos de mídia pesados
 *.mp4
 *.avi
