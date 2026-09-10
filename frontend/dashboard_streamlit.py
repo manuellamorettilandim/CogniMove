@@ -893,17 +893,6 @@ with col_analise:
                 "obra_viaria":  _sim_obra,
                 "dia_jogo":     _sim_jogo,
                 "feriado":      _sim_feriado,
-                "fatores_ativos": [
-                    nome
-                    for chave, nome in [
-                        ("chuva_forte",  "Chuva Forte / Baixa Visibilidade"),
-                        ("horario_pico", "Horário de Pico"),
-                        ("obra_viaria",  "Obra Viária / Desvio"),
-                        ("dia_jogo",     "Dia de Jogo / Evento de Grande Porte"),
-                        ("feriado",      "Feriado"),
-                    ]
-                    if _ctx_sim.get(chave, False)  # avaliado após ctx_sim ser definido
-                ],
             }
             # Reconstruir fatores_ativos com o dict já montado
             _ctx_sim["fatores_ativos"] = [
