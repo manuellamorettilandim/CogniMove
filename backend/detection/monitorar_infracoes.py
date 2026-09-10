@@ -55,6 +55,10 @@ def parse_args():
         help="Iniciar o dashboard web Flask em paralelo.",
     )
     p.add_argument(
+        "--salvar-video", "--gravar-completo", action="store_true",
+        help="Gravar o vídeo completo anotado localmente na pasta videos_treinados/.",
+    )
+    p.add_argument(
         "--porta", type=int, default=5000,
         help="Porta do dashboard Flask. Padrão: 5000",
     )
@@ -133,6 +137,7 @@ def main():
         output_dir      = str(_BACKEND / "outputs"),
         camera_name     = args.camera,
         show_window     = args.janela or not args.dashboard,
+        salvar_video    = args.salvar_video,
         frame_queue     = frame_q     if args.dashboard else None,
         infracoes_queue = infracoes_q if args.dashboard else None,
         contexto_urbano  = contexto_urbano,

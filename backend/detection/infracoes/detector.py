@@ -94,6 +94,8 @@ class InfracaoDetector:
                  output_dir:      str   = None,
                  camera_name:     str   = "camera",
                  show_window:     bool  = False,
+                 salvar_video:    bool  = False,
+                 video_output_dir: str | Path | None = None,
                  frame_queue:     queue.Queue | None = None,
                  infracoes_queue: queue.Queue | None = None,
                  contexto_urbano: GerenciadorContextoUrbano | None = None,
@@ -106,6 +108,8 @@ class InfracaoDetector:
             output_dir:      Pasta raiz para evidências e relatórios
             camera_name:     Identificador da câmera no relatório
             show_window:     Exibir janela OpenCV durante processamento
+            salvar_video:    Gravar o vídeo completo anotado do início ao fim
+            video_output_dir: Diretório de saída do vídeo completo (padrão: videos_treinados/)
             frame_queue:     Queue para streaming de frames ao Flask
             infracoes_queue: Queue para notificações SSE ao Flask
         """
@@ -113,6 +117,10 @@ class InfracaoDetector:
         self.preset_name     = preset_name
         self.camera_name     = camera_name
         self.show_window     = show_window
+        self.salvar_video    = salvar_video
+        self.video_output_dir = str(video_output_dir) if video_output_dir else str(_ROOT / "videos_treinados")
+        self.full_video_writer: cv2.VideoWriter | None = None
+        self.full_video_path:   str | None = None
         self.frame_queue     = frame_queue
         self.infracoes_queue = infracoes_queue
         self._running        = False
@@ -199,6 +207,26 @@ class InfracaoDetector:
         rel_dir = os.path.join(self.output_dir, "relatorios")
         self.evidencias = GerenciadorEvidencias(ev_dir, fps=fps)
         self.relatorio  = GerenciadorRelatorio(rel_dir, camera_name=self.camera_name)
+
+        # Gravação do vídeo completo anotado
+        if self.salvar_video:
+            os.makedirs(self.video_output_dir, exist_ok=True)
+            ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            preset_clean = (self.preset_name or "preset").replace(" ", "_")
+            cam_clean = (self.camera_name or "camera").replace(" ", "_")
+            video_name = f"video_anotado_{preset_clean}_{cam_clean}_{ts}.mp4"
+            self.full_video_path = os.path.join(self.video_output_dir, video_name)
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+            self.full_video_writer = cv2.VideoWriter(
+                self.full_video_path, fourcc, fps, (width, height)
+            )
+            if self.full_video_writer and self.full_video_writer.isOpened():
+                print(f"[Detector] Gravação de vídeo completo ativada: {self.full_video_path}")
+            else:
+                logger.warning(
+                    "Não foi possível iniciar cv2.VideoWriter para o vídeo completo em %s",
+                    self.full_video_path,
+                )
 
         print(f"[Detector] {width}x{height} @ {fps:.1f}fps | preset={self.preset_name}")
         print(f"[Detector] {len(lines)} linhas | {len(polys)} polígonos | "
@@ -358,6 +386,10 @@ class InfracaoDetector:
 
             annotated, _ = self._process_frame(frame)
 
+            # Gravar frame no vídeo completo anotado
+            if self.full_video_writer and self.full_video_writer.isOpened():
+                self.full_video_writer.write(annotated)
+
             # Enviar frame JPEG para streaming Flask
             if self.frame_queue is not None:
                 ok, buf = cv2.imencode(".jpg", annotated,
@@ -379,6 +411,16 @@ class InfracaoDetector:
                     break
 
         cap.release()
+        if self.full_video_writer:
+            self.full_video_writer.release()
+            self.full_video_writer = None
+            if (
+                self.full_video_path
+                and os.path.exists(self.full_video_path)
+                and os.path.getsize(self.full_video_path) > 0
+            ):
+                print(f"[Detector] Vídeo completo anotado salvo em: {self.full_video_path}")
+
         if self.show_window:
             cv2.destroyAllWindows()
 
