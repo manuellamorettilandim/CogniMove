@@ -11,7 +11,7 @@ backend/training/datasets/
 backend/outputs/
 backend/outputs/uploads/
 
-# Pasta local para vídeos completos anotados (NÃO enviar ao Git)
+# Vídeos anotados gerados localmente - nunca commitar (arquivos grandes, o GitHub rejeita acima de 100MB e já tivemos problema com isso antes)
 videos_treinados/
 
 # Arquivos de mídia pesados

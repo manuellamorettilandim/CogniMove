@@ -213,8 +213,7 @@ class InfracaoDetector:
             os.makedirs(self.video_output_dir, exist_ok=True)
             ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             preset_clean = (self.preset_name or "preset").replace(" ", "_")
-            cam_clean = (self.camera_name or "camera").replace(" ", "_")
-            video_name = f"video_anotado_{preset_clean}_{cam_clean}_{ts}.mp4"
+            video_name = f"{preset_clean}_{ts}.mp4"
             self.full_video_path = os.path.join(self.video_output_dir, video_name)
             fourcc = cv2.VideoWriter_fourcc(*"mp4v")
             self.full_video_writer = cv2.VideoWriter(
@@ -378,51 +377,52 @@ class InfracaoDetector:
         self._setup(width, height, fps)
         print(f"[Detector] Monitorando: {self.source}  (Q para sair)")
 
-        while self._running and cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                print("[Detector] Fim da fonte de vídeo.")
-                break
-
-            annotated, _ = self._process_frame(frame)
-
-            # Gravar frame no vídeo completo anotado
-            if self.full_video_writer and self.full_video_writer.isOpened():
-                self.full_video_writer.write(annotated)
-
-            # Enviar frame JPEG para streaming Flask
-            if self.frame_queue is not None:
-                ok, buf = cv2.imencode(".jpg", annotated,
-                                       [cv2.IMWRITE_JPEG_QUALITY, 72])
-                if ok:
-                    bts = buf.tobytes()
-                    try:
-                        self.frame_queue.put_nowait(bts)
-                    except queue.Full:
-                        try:
-                            self.frame_queue.get_nowait()
-                            self.frame_queue.put_nowait(bts)
-                        except Exception:
-                            pass
-
-            if self.show_window:
-                cv2.imshow("CogniMove — Infracoes", annotated)
-                if cv2.waitKey(1) & 0xFF in (ord("q"), 27):
+        try:
+            while self._running and cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    print("[Detector] Fim da fonte de vídeo.")
                     break
 
-        cap.release()
-        if self.full_video_writer:
-            self.full_video_writer.release()
-            self.full_video_writer = None
-            if (
-                self.full_video_path
-                and os.path.exists(self.full_video_path)
-                and os.path.getsize(self.full_video_path) > 0
-            ):
-                print(f"[Detector] Vídeo completo anotado salvo em: {self.full_video_path}")
+                annotated, _ = self._process_frame(frame)
 
-        if self.show_window:
-            cv2.destroyAllWindows()
+                # Gravar frame no vídeo completo anotado
+                if self.full_video_writer and self.full_video_writer.isOpened():
+                    self.full_video_writer.write(annotated)
+
+                # Enviar frame JPEG para streaming Flask
+                if self.frame_queue is not None:
+                    ok, buf = cv2.imencode(".jpg", annotated,
+                                           [cv2.IMWRITE_JPEG_QUALITY, 72])
+                    if ok:
+                        bts = buf.tobytes()
+                        try:
+                            self.frame_queue.put_nowait(bts)
+                        except queue.Full:
+                            try:
+                                self.frame_queue.get_nowait()
+                                self.frame_queue.put_nowait(bts)
+                            except Exception:
+                                pass
+
+                if self.show_window:
+                    cv2.imshow("CogniMove — Infracoes", annotated)
+                    if cv2.waitKey(1) & 0xFF in (ord("q"), 27):
+                        break
+        finally:
+            cap.release()
+            if self.full_video_writer:
+                self.full_video_writer.release()
+                self.full_video_writer = None
+                if (
+                    self.full_video_path
+                    and os.path.exists(self.full_video_path)
+                    and os.path.getsize(self.full_video_path) > 0
+                ):
+                    print(f"[Vídeo Treinado] Salvo em: {self.full_video_path}")
+
+            if self.show_window:
+                cv2.destroyAllWindows()
 
         total = self.stats["total"]
         print(f"\n[Detector] Encerrado. {total} infração(ões) detectada(s).")

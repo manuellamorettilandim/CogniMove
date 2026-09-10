@@ -55,8 +55,8 @@ def parse_args():
         help="Iniciar o dashboard web Flask em paralelo.",
     )
     p.add_argument(
-        "--salvar-video", "--gravar-completo", action="store_true",
-        help="Gravar o vídeo completo anotado localmente na pasta videos_treinados/.",
+        "--salvar-video", "-sv", "--gravar-completo", action="store_true",
+        help="Salvar o vídeo anotado completo em videos_treinados/ (nome baseado no preset e timestamp).",
     )
     p.add_argument(
         "--porta", type=int, default=5000,
