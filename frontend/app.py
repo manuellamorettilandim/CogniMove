@@ -167,7 +167,169 @@ def _parse_args():
     return p.parse_args()
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# NOVOS ENDPOINTS — Site de Demonstração FECART
+# ═══════════════════════════════════════════════════════════════════════════
+
+# ── Analytics: Contexto Urbano + Causa-Raiz ───────────────────────────────
+# O __init__.py de backend/analytics/ usa `from backend.analytics.X import Y`,
+# o que exige que _ROOT (raiz do projeto) esteja no sys.path.
+# Importamos os módulos DIRETAMENTE (sem passar pelo __init__) para evitar
+# acionar o import absoluto que depende de 'backend' como pacote de topo.
+
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
+try:
+    import importlib.util as _ilu
+
+    def _load_module(name, path):
+        spec = _ilu.spec_from_file_location(name, path)
+        mod  = _ilu.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    _mod_ctx  = _load_module("contexto_urbano", str(_BACKEND / "analytics" / "contexto_urbano.py"))
+    _mod_causa = _load_module("causa_raiz",      str(_BACKEND / "analytics" / "causa_raiz.py"))
+
+    GerenciadorContextoUrbano = _mod_ctx.GerenciadorContextoUrbano
+    MotorCausaRaiz            = _mod_causa.MotorCausaRaiz
+
+    _contexto_urbano: "GerenciadorContextoUrbano | None" = GerenciadorContextoUrbano()
+    _motor_causa_raiz: "MotorCausaRaiz | None"           = MotorCausaRaiz()
+    print("[Analytics] ContextoUrbano + MotorCausaRaiz carregados.")
+except Exception as _analytics_err:
+    _contexto_urbano  = None
+    _motor_causa_raiz = None
+    print(f"[Aviso] Analytics não carregados: {_analytics_err}")
+
+
+@app.route("/api/contexto", methods=["GET", "POST"])
+def api_contexto():
+    """GET: retorna contexto urbano atual. POST: {flag, estado} para ativar/desativar cenário."""
+    if _contexto_urbano is None:
+        return jsonify({"error": "Analytics não disponível"}), 503
+    if request.method == "POST":
+        data  = request.get_json() or {}
+        flag  = data.get("flag", "")
+        estado = bool(data.get("estado", False))
+        try:
+            _contexto_urbano.set_flag(flag, estado)
+        except KeyError as exc:
+            return jsonify({"error": str(exc)}), 400
+        return jsonify({"ok": True, "contexto": _contexto_urbano.obter_contexto_atual()})
+    return jsonify(_contexto_urbano.obter_contexto_atual())
+
+
+@app.route("/api/causa_raiz")
+def api_causa_raiz():
+    """Calcula causa-raiz probabilística. Query params: tipo=<CODIGO>, contexto opcional."""
+    if _motor_causa_raiz is None or _contexto_urbano is None:
+        return jsonify({"error": "Analytics não disponível"}), 503
+    tipo = request.args.get("tipo", "")
+    ctx  = _contexto_urbano.obter_contexto_atual()
+    resultado = _motor_causa_raiz.calcular_probabilidades(tipo, ctx)
+    return jsonify(resultado)
+
+
+# ── Curados ───────────────────────────────────────────────────────────────
+
+_CURADOS_REAL = _BACKEND / "outputs" / "curados" / "real"
+_CURADOS_GTA  = _BACKEND / "outputs" / "curados" / "gta"
+
+
+def _listar_curados(pasta: Path) -> list:
+    """Lê todos os .json de uma pasta de curados, retorna lista de dicts."""
+    if not pasta.exists():
+        return []
+    registros = []
+    for jf in sorted(pasta.glob("*.json")):
+        try:
+            with open(jf, encoding="utf-8") as fh:
+                rec = json.load(fh)
+            rec.setdefault("_arquivo", jf.name)
+            registros.append(rec)
+        except Exception:
+            pass
+    return registros
+
+
+@app.route("/api/curados")
+def api_curados():
+    """Ocorrências curadas de vídeo real (Monitoramento/Análise)."""
+    return jsonify(_listar_curados(_CURADOS_REAL))
+
+
+@app.route("/api/curados/gta")
+def api_curados_gta():
+    """Ocorrências curadas dos vídeos GTA (Interatividade)."""
+    return jsonify(_listar_curados(_CURADOS_GTA))
+
+
+@app.route("/clips/<path:filename>")
+@app.route("/static/clips/<path:filename>")
+def servir_clip(filename):
+    """
+    Serve MP4/JPG de clipes curados com suporte a HTTP Range requests.
+
+    Flask ≥ 2.x: send_from_directory chama send_file com conditional=True (padrão),
+    ativando ETag, Last-Modified e suporte a Range (HTTP 206 Partial Content).
+    O Werkzeug intercepta o header Range: bytes=X-Y do browser e retorna apenas
+    o trecho solicitado — necessário para play/seek no <video> sem baixar o arquivo
+    inteiro. conditional=True é passado explicitamente para deixar o comportamento
+    documentado e garantido independente de versão do Flask.
+    """
+    for pasta in (_CURADOS_REAL, _CURADOS_GTA, _BACKEND / "outputs"):
+        alvo = pasta / filename
+        if alvo.exists() and alvo.is_file():
+            return send_from_directory(str(pasta), filename, conditional=True)
+    return "Clipe não encontrado", 404
+
+
+# ── Relatório Histórico ───────────────────────────────────────────────────
+
+@app.route("/api/relatorio/historico")
+def api_relatorio_historico():
+    """
+    Consolida registros de sessões passadas (todos os .jsonl em backend/outputs/)
+    mais a sessão corrente em memória (se detector estiver ativo).
+    O .jsonl da sessão atual é excluído da leitura de disco para evitar duplicatas —
+    seus dados vêm diretamente do get_records() em memória.
+    """
+    outputs_dir = _BACKEND / "outputs"
+    sessao_jsonl = (
+        Path(detector.relatorio.jsonl_path).resolve()
+        if detector and detector.relatorio
+        else None
+    )
+
+    passados: list[dict] = []
+    if outputs_dir.exists():
+        for jf in sorted(outputs_dir.glob("**/*.jsonl")):
+            if sessao_jsonl and jf.resolve() == sessao_jsonl:
+                continue  # Sessão atual virá da memória
+            try:
+                with open(jf, encoding="utf-8") as fh:
+                    for linha in fh:
+                        linha = linha.strip()
+                        if linha:
+                            try:
+                                passados.append(json.loads(linha))
+                            except json.JSONDecodeError:
+                                pass
+            except Exception:
+                pass
+
+    correntes: list[dict] = (
+        detector.relatorio.get_records() if detector and detector.relatorio else []
+    )
+    return jsonify(passados + correntes)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+
 if __name__ == "__main__":
+
     args = _parse_args()
 
     if args.source is not None:
