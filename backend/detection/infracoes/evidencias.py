@@ -91,6 +91,15 @@ class GerenciadorEvidencias:
 
         return {"screenshot": ss_path, "clip": clip_path}
 
+    def aguardar_conclusao(self, timeout: float = 15.0):
+        """Aguardar a gravação de todos os clipes pendentes antes de encerrar."""
+        start = time.time()
+        while time.time() - start < timeout:
+            with self._lock:
+                if not self._pending:
+                    break
+            time.sleep(0.2)
+
     # ── Helpers privados ──────────────────────────────────────────────────────
 
     def _save_clip(self, clip_data: dict):

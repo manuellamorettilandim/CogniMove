@@ -106,12 +106,12 @@ class MotorCausaRaiz:
               - "fatores_ativos":   list[str] — nomes legíveis dos cenários ligados
               - "distribuicao_base": dict[str, float] — distribuição ANTES de
                                      qualquer modificador de contexto/evidência
-              - "contribuicoes":    list[tuple[str, str, float]] — cada modificador
-                                     efetivamente aplicado, como (fonte, causa, pontos),
-                                     fonte em {"contexto", "evidencia"}
+              - "contribuicoes":    list[dict] — cada modificador efetivamente aplicado,
+                                     contendo chaves "fonte", "causa" e "pontos"
               - "origem":           str — o que moveu a causa vencedora:
                                      "contexto", "evidencia", "ambos" ou "nenhuma"
         """
+        contexto = contexto or {}
         base = self.TABELA_PROBABILIDADES_BASE.get(tipo_infracao)
         if base is None:
             logger.error(
@@ -131,21 +131,21 @@ class MotorCausaRaiz:
 
         evidencias = evidencias or {}
         probs = copy.deepcopy(base)
-        contribuicoes: list[tuple[str, str, float]] = []
+        contribuicoes: list[dict] = []
 
         # Aplicar modificadores de contexto (hipótese externa)
         for chave_contexto, ajustes in self.MODIFICADORES_CONTEXTO.items():
             if contexto.get(chave_contexto, False):
                 for causa, incremento in ajustes:
                     probs[causa] = probs.get(causa, 0.0) + incremento
-                    contribuicoes.append(("contexto", causa, incremento))
+                    contribuicoes.append({"fonte": "contexto", "causa": causa, "pontos": incremento})
 
         # Aplicar modificadores de evidência (o que foi medido na cena)
         for chave_evidencia, ajustes in self.MODIFICADORES_EVIDENCIA.items():
             if evidencias.get(chave_evidencia, False):
                 for causa, incremento in ajustes:
                     probs[causa] = probs.get(causa, 0.0) + incremento
-                    contribuicoes.append(("evidencia", causa, incremento))
+                    contribuicoes.append({"fonte": "evidencia", "causa": causa, "pontos": incremento})
 
         # Normalizar para somar 1.0
         probs = self._normalizar(probs)
@@ -185,6 +185,7 @@ class MotorCausaRaiz:
             dict com "real", "neutro" (ambos no formato de calcular_probabilidades)
             e "mudou_causa" (bool, True se a causa vencedora diverge entre os dois).
         """
+        contexto = contexto or {}
         real = self.calcular_probabilidades(tipo_infracao, contexto, evidencias)
         neutro = self.calcular_probabilidades(tipo_infracao, {}, {})
         return {
@@ -206,12 +207,12 @@ class MotorCausaRaiz:
     @staticmethod
     def _determinar_origem(
         causa_top: str,
-        contribuicoes: list[tuple[str, str, float]],
+        contribuicoes: list[dict],
     ) -> str:
         """Determina qual fonte (contexto, evidência, ambos ou nenhuma) moveu
         a causa vencedora, a partir do registro de contribuições aplicadas.
         """
-        fontes = {fonte for fonte, causa, _ in contribuicoes if causa == causa_top}
+        fontes = {c["fonte"] for c in contribuicoes if c["causa"] == causa_top}
         if fontes == {"contexto"}:
             return "contexto"
         if fontes == {"evidencia"}:

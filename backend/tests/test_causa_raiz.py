@@ -278,12 +278,13 @@ def test_contribuicoes_registra_fonte_contexto_e_evidencia(motor):
     finally:
         MotorCausaRaiz.MODIFICADORES_EVIDENCIA = original_evidencia
 
-    esperado = {
-        ("contexto", Causa.SINALIZACAO_POUCO_VISIVEL.value, 0.25),
-        ("contexto", Causa.CONGESTIONAMENTO.value, 0.20),
-        ("evidencia", Causa.CONDUTA_DO_CONDUTOR.value, 0.10),
-    }
-    assert set(res["contribuicoes"]) == esperado
+    esperado = [
+        {"fonte": "contexto", "causa": Causa.SINALIZACAO_POUCO_VISIVEL.value, "pontos": 0.25},
+        {"fonte": "contexto", "causa": Causa.CONGESTIONAMENTO.value, "pontos": 0.20},
+        {"fonte": "evidencia", "causa": Causa.CONDUTA_DO_CONDUTOR.value, "pontos": 0.10},
+    ]
+    for item in esperado:
+        assert item in res["contribuicoes"]
     assert len(res["contribuicoes"]) == len(esperado)
 
 
@@ -310,3 +311,29 @@ def test_calcular_com_contrafactual_contexto_forte_muda_causa(motor):
     assert resultado["neutro"]["causa_principal"] == Causa.TEMPO_SEMAFORICO_INADEQUADO.value
     assert resultado["real"]["causa_principal"] == Causa.CONGESTIONAMENTO.value
     assert resultado["mudou_causa"] is True
+
+
+# ── Guarda contra contexto=None ─────────────────────────────────────────────
+
+
+def test_calcular_probabilidades_contexto_none_equivale_a_vazio(motor):
+    """contexto=None deve se comportar exatamente como contexto={} —
+    todos os fatores inativos, sem AttributeError."""
+    for tipo in MotorCausaRaiz.TABELA_PROBABILIDADES_BASE:
+        res_none = motor.calcular_probabilidades(tipo, None)
+        res_vazio = motor.calcular_probabilidades(tipo, {})
+        assert res_none == res_vazio, (
+            f"Resultado divergiu para '{tipo}' entre contexto=None e contexto={{}}."
+        )
+
+
+def test_calcular_com_contrafactual_contexto_none_equivale_a_vazio(motor):
+    """contexto=None deve se comportar exatamente como contexto={} —
+    sem AttributeError e com mudou_causa=False."""
+    for tipo in MotorCausaRaiz.TABELA_PROBABILIDADES_BASE:
+        res_none = motor.calcular_com_contrafactual(tipo, None)
+        res_vazio = motor.calcular_com_contrafactual(tipo, {})
+        assert res_none == res_vazio, (
+            f"Resultado divergiu para '{tipo}' entre contexto=None e contexto={{}}."
+        )
+        assert res_none["mudou_causa"] is False

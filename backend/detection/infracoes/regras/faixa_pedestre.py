@@ -35,12 +35,12 @@ def point_in_polygon(pt, polygon_pts) -> bool:
 class RegraFaixaPedestre:
     """Detecta invasão de faixa de pedestres e/ou bike box."""
 
-    def __init__(self, lines: list, polygons: list = None, cooldown_frames: int = 30):
+    def __init__(self, lines: list, polygons: list = None, cooldown_frames: int = 150):
         """
         Args:
             lines:           Lista de dicts {name, pt1, pt2, color}
             polygons:        Lista de dicts {name, points}
-            cooldown_frames: Frames de espera antes de re-alertar o mesmo veículo
+            cooldown_frames: Frames de espera antes de re-alertar o mesmo veículo (padrão: 150 = 5s)
         """
         self.lines    = lines or []
         self.polygons = polygons or []
@@ -61,20 +61,22 @@ class RegraFaixaPedestre:
                 continue
             ids_ativos.add(track.id)
 
+            em_cooldown = (
+                track.id in self._cooldown and
+                frame_idx - self._cooldown[track.id] < self.cooldown_frames
+            )
+
             bottom_pt = track.current["bottom_pt"]
             polys_agora  = self._polygons_containing(bottom_pt)
             polys_antes  = self._dentro_de.get(track.id, set())
             polys_entrando = polys_agora - polys_antes
             self._dentro_de[track.id] = polys_agora
 
-            for nome_poly in polys_entrando:
+            if not em_cooldown and polys_entrando:
+                nome_poly = next(iter(polys_entrando))
+                self._cooldown[track.id] = frame_idx
                 infractions.append(self._montar_infracao(track, frame_idx, f"Invasão de {nome_poly}"))
-
-            em_cooldown = (
-                track.id in self._cooldown and
-                frame_idx - self._cooldown[track.id] < self.cooldown_frames
-            )
-            if not em_cooldown:
+            elif not em_cooldown:
                 desc_linha = self._check_line_crossing(track)
                 if desc_linha:
                     self._cooldown[track.id] = frame_idx

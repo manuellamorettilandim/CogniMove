@@ -99,7 +99,9 @@ class InfracaoDetector:
                  frame_queue:     queue.Queue | None = None,
                  infracoes_queue: queue.Queue | None = None,
                  contexto_urbano: GerenciadorContextoUrbano | None = None,
-                 motor_causa_raiz: MotorCausaRaiz | None = None):
+                 motor_causa_raiz: MotorCausaRaiz | None = None,
+                 buffer_seconds:  float = 5.0,
+                 post_seconds:    float = 10.0):
         """
         Args:
             source:          0 (webcam), "rtsp://...", ou caminho de arquivo .mp4
@@ -112,6 +114,8 @@ class InfracaoDetector:
             video_output_dir: Diretório de saída do vídeo completo (padrão: videos_treinados/)
             frame_queue:     Queue para streaming de frames ao Flask
             infracoes_queue: Queue para notificações SSE ao Flask
+            buffer_seconds:  Segundos de contexto antes do evento (padrão: 5.0)
+            post_seconds:    Segundos de contexto após o evento (padrão: 10.0)
         """
         self.source          = source
         self.preset_name     = preset_name
@@ -123,6 +127,8 @@ class InfracaoDetector:
         self.full_video_path:   str | None = None
         self.frame_queue     = frame_queue
         self.infracoes_queue = infracoes_queue
+        self.buffer_seconds  = buffer_seconds
+        self.post_seconds    = post_seconds
         self._running        = False
         self.frame_idx       = 0
 
@@ -205,7 +211,12 @@ class InfracaoDetector:
         # Evidências e relatório
         ev_dir  = os.path.join(self.output_dir, "evidencias")
         rel_dir = os.path.join(self.output_dir, "relatorios")
-        self.evidencias = GerenciadorEvidencias(ev_dir, fps=fps)
+        self.evidencias = GerenciadorEvidencias(
+            ev_dir,
+            fps=fps,
+            buffer_seconds=self.buffer_seconds,
+            post_seconds=self.post_seconds,
+        )
         self.relatorio  = GerenciadorRelatorio(rel_dir, camera_name=self.camera_name)
 
         # Gravação do vídeo completo anotado
@@ -359,7 +370,7 @@ class InfracaoDetector:
 
     # ── Loop principal ────────────────────────────────────────────────────────
 
-    def run(self):
+    def run(self, max_frames: int | None = None):
         """Inicia o loop de detecção. Bloqueia até encerrar."""
         self._running = True
 
@@ -376,15 +387,24 @@ class InfracaoDetector:
 
         self._setup(width, height, fps)
         print(f"[Detector] Monitorando: {self.source}  (Q para sair)")
+        import time as _time
+        _start_time = _time.time()
+        _first_det_time = None
+        _frame_counter = 0
 
         try:
             while self._running and cap.isOpened():
+                if max_frames is not None and self.frame_idx >= max_frames:
+                    print(f"[Detector] Limite de {max_frames} frames atingido.")
+                    break
+
                 ret, frame = cap.read()
                 if not ret:
                     print("[Detector] Fim da fonte de vídeo.")
                     break
 
-                annotated, _ = self._process_frame(frame)
+                frame_start = _time.time()
+                annotated, infractions = self._process_frame(frame)
 
                 # Gravar frame no vídeo completo anotado
                 if self.full_video_writer and self.full_video_writer.isOpened():
@@ -405,11 +425,23 @@ class InfracaoDetector:
                             except Exception:
                                 pass
 
+                # Timing and FPS reporting
+                _frame_counter += 1
+                proc_time = _time.time() - frame_start
+                if infractions and _first_det_time is None:
+                    _first_det_time = _time.time() - _start_time
+                    print(f"[Detector] Primeira detecção após {_first_det_time:.2f}s")
+                if _frame_counter % 30 == 0:
+                    avg_fps = _frame_counter / (_time.time() - _start_time)
+                    print(f"[Detector] Processamento médio: {avg_fps:.2f} fps")
+
                 if self.show_window:
                     cv2.imshow("CogniMove — Infracoes", annotated)
                     if cv2.waitKey(1) & 0xFF in (ord("q"), 27):
                         break
         finally:
+            if self.evidencias:
+                self.evidencias.aguardar_conclusao()
             cap.release()
             if self.full_video_writer:
                 self.full_video_writer.release()

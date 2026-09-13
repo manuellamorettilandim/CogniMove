@@ -11,7 +11,7 @@ backend/training/datasets/
 backend/outputs/
 backend/outputs/uploads/
 
-# Vídeos anotados gerados localmente - nunca commitar (arquivos grandes, o GitHub rejeita acima de 100MB e já tivemos problema com isso antes)
+# Vídeos anotados gerados localmente (--salvar-video)
 videos_treinados/
 
 # Arquivos de mídia pesados
@@ -24,18 +24,29 @@ videos_treinados/
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+
+# Ambientes virtuais e IDEs
+.venv/
+venv/
+env/
+.vscode/
+.idea/
+.DS_Store
 
 # Node / Frontend
 node_modules/
 frontend/.env
 
+# Arquivos compactados
 cognimovezipado.zip
+*.zip
 
 # Logs de depuração e backups locais
 *.bak.*
 resultado_validacao.txt
 
-# Ferramenta descartável de apoio à demonstração
+# Ferramentas descartáveis de apoio à demonstração
 scratch_datas_chuva.py
 scratch_datas_jogo.py
 scratch_diag_semaforo.py

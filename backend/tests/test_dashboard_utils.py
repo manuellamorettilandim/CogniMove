@@ -128,8 +128,8 @@ def test_montar_tabela_procedencia_causas():
 def test_montar_resumo_contribuicoes():
     resultado_causa = {
         "contribuicoes": [
-            ("contexto", "Sinalização pouco visível", 0.25),
-            ("evidencia", "Tempo semafórico inadequado", 0.10),
+            {"fonte": "contexto", "causa": "Sinalização pouco visível", "pontos": 0.25},
+            {"fonte": "evidencia", "causa": "Tempo semafórico inadequado", "pontos": 0.10},
         ]
     }
     contexto = {"chuva_forte": True, "horario_pico": False}
