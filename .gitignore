@@ -16,6 +16,7 @@ videos_treinados/
 
 # Arquivos de mídia pesados
 *.mp4
+!videos_originais/video_interatividade_corte.mp4
 *.avi
 *.mov
 *.mkv
