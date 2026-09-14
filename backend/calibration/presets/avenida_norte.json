@@ -37,7 +37,24 @@
       ]
     }
   ],
-  "stop_lines": [],
+  "stop_lines": [
+    {
+      "name": "Linha de Retencao",
+      "pt1": [
+        10,
+        228
+      ],
+      "pt2": [
+        210,
+        215
+      ],
+      "color": [
+        0,
+        255,
+        255
+      ]
+    }
+  ],
   "polygons": [
     {
       "name": "Area 1",
