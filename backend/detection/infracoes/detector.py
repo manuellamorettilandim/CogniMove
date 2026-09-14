@@ -101,7 +101,8 @@ class InfracaoDetector:
                  contexto_urbano: GerenciadorContextoUrbano | None = None,
                  motor_causa_raiz: MotorCausaRaiz | None = None,
                  buffer_seconds:  float = 5.0,
-                 post_seconds:    float = 10.0):
+                 post_seconds:    float = 10.0,
+                 desenhar_hud_completo: bool = True):
         """
         Args:
             source:          0 (webcam), "rtsp://...", ou caminho de arquivo .mp4
@@ -121,7 +122,8 @@ class InfracaoDetector:
         self.preset_name     = preset_name
         self.camera_name     = camera_name
         self.show_window     = show_window
-        self.salvar_video    = salvar_video
+        self.salvar_video = salvar_video
+        self.desenhar_hud_completo = desenhar_hud_completo
         self.video_output_dir = str(video_output_dir) if video_output_dir else str(_ROOT / "videos_treinados")
         self.full_video_writer: cv2.VideoWriter | None = None
         self.full_video_path:   str | None = None
@@ -177,7 +179,11 @@ class InfracaoDetector:
     def _setup(self, width: int, height: int, fps: float):
         """Instancia todos os módulos com a resolução real da fonte."""
         raw = load_preset(self.preset_name)
+
+
         self._preset = scale_preset(raw, width, height)
+
+
 
         # Linha de retenção padrão se preset não tem nenhuma
         if not self._preset["lines"] and not self._preset["stop_lines"]:
@@ -263,6 +269,12 @@ class InfracaoDetector:
                     if any(k in lbl for k in _SEMAFORO_LABELS):
                         x1,y1,x2,y2 = map(int, box.xyxy[0].tolist())
                         detected_lights.append({"bbox": (x1,y1,x2,y2)})
+        # Fallback manual: usar caixa do preset quando o YOLO não localizar nada
+        if not detected_lights and self._preset.get("semaforo_bbox"):
+            detected_lights.append({"bbox": tuple(self._preset["semaforo_bbox"])})
+        # Debug output every 10 frames
+
+
 
         light_state = self.regra_sinal.get_light_state()
 
@@ -335,9 +347,21 @@ class InfracaoDetector:
         light = self.regra_sinal.get_light_state() if self.regra_sinal else "unknown"
         lc    = self._LIGHT_COLORS.get(light, (110,110,110))
 
+        # Círculo indicador de semáforo (sempre desenha)
+        cx,cy,r = w-32,32,20
+        cv2.circle(frame,(cx,cy),r+2,(30,30,30),-1)
+        cv2.circle(frame,(cx,cy),r,lc,-1)
+        cv2.circle(frame,(cx,cy),r,(200,200,200),1)
+
+        # Se o HUD completo não for solicitado, sai aqui (mantém apenas o círculo)
+        if not self.desenhar_hud_completo:
+            return
+
+        # Barra preta de fundo
         cv2.rectangle(frame,(0,0),(w,78),(12,12,12),-1)
         cv2.line(frame,(0,78),(w,78),lc,2)
 
+        # Texto principal e informações adicionais
         cv2.putText(frame,"COGNIMOVE  |  MONITORAMENTO DE INFRACOES EM TEMPO REAL",
                     (10,24),cv2.FONT_HERSHEY_SIMPLEX,0.52,(0,220,220),1,cv2.LINE_AA)
         cv2.putText(frame,
@@ -346,17 +370,16 @@ class InfracaoDetector:
                     f"{datetime.datetime.now().strftime('%H:%M:%S')}",
                     (10,46),cv2.FONT_HERSHEY_SIMPLEX,0.40,(190,190,190),1,cv2.LINE_AA)
 
+        # Estatísticas resumidas
         stat_txt = (f"Total: {self.stats['total']}   "
                     f"Sinal Verm.: {self.stats.get('AVANCO_SINAL_VERMELHO',0)}   "
                     f"Faixa: {self.stats.get('INVASAO_FAIXA',0)}   "
                     f"Bloqueio: {self.stats.get('BLOQUEIO_CRUZAMENTO',0)}")
         cv2.putText(frame,stat_txt,(10,66),cv2.FONT_HERSHEY_SIMPLEX,0.40,lc,1,cv2.LINE_AA)
 
-        # Círculo indicador de semáforo
-        cx,cy,r = w-32,32,20
-        cv2.circle(frame,(cx,cy),r+2,(30,30,30),-1)
-        cv2.circle(frame,(cx,cy),r,lc,-1)
-        cv2.circle(frame,(cx,cy),r,(200,200,200),1)
+
+
+
 
     # ── Resolução de fonte ───────────────────────────────────────────────────
 

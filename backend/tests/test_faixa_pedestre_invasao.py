@@ -99,6 +99,9 @@ def test_track_sai_e_entra_de_novo_gera_duas_infracoes():
         frame_idx += 1
         total_invasoes += len(_infracoes_de_invasao(regra.checar(None, [track], "unknown", frame_idx)))
 
+    # Avança além de cooldown_frames (150 frames) para permitir nova infração na reentrada
+    frame_idx += regra.cooldown_frames + 1
+
     # 2ª entrada
     for _ in range(3):
         track.mover_para(PONTO_DENTRO)
@@ -109,7 +112,7 @@ def test_track_sai_e_entra_de_novo_gera_duas_infracoes():
 
 
 def test_dois_tracks_dentro_geram_uma_infracao_cada():
-    """(c) Dois tracks diferentes entram no polígono: 1 infração para cada um."""
+    """(c) Dois tracks diferentes entram no polígono em posições distintas: 1 infração para cada um."""
     regra = RegraFaixaPedestre(lines=[], polygons=[POLIGONO])
     track1 = FakeTrack(1)
     track2 = FakeTrack(2)
@@ -120,8 +123,9 @@ def test_dois_tracks_dentro_geram_uma_infracao_cada():
     regra.checar(None, [track1, track2], "unknown", frame_idx)
 
     frame_idx += 1
-    track1.mover_para(PONTO_DENTRO)
-    track2.mover_para(PONTO_DENTRO)
+    # Posições distintas no mesmo polígono (distância = 60px > 40px)
+    track1.mover_para((120, 150))
+    track2.mover_para((180, 150))
     infracoes = _infracoes_de_invasao(regra.checar(None, [track1, track2], "unknown", frame_idx))
 
     assert len(infracoes) == 2
@@ -129,10 +133,65 @@ def test_dois_tracks_dentro_geram_uma_infracao_cada():
 
     # Permanecendo dentro nos frames seguintes, não deve haver novas infrações
     frame_idx += 1
-    track1.mover_para(PONTO_DENTRO)
-    track2.mover_para(PONTO_DENTRO)
+    track1.mover_para((120, 150))
+    track2.mover_para((180, 150))
     infracoes_seguintes = _infracoes_de_invasao(regra.checar(None, [track1, track2], "unknown", frame_idx))
     assert infracoes_seguintes == []
+
+
+def test_dois_tracks_mesma_posicao_dentro_cooldown_gera_uma_infracao():
+    """
+    (a) Dois track_ids diferentes, mesma posição, dentro do cooldown → só 1 infração.
+    Simula o rastreador perdendo identidade e gerando novo ID para o mesmo veículo parado.
+    """
+    regra = RegraFaixaPedestre(lines=[], polygons=[POLIGONO], cooldown_frames=150, raio_posicao_px=40.0)
+    track1 = FakeTrack(1)
+    track2 = FakeTrack(2)
+
+    # Frame 1: ambos fora
+    track1.mover_para(PONTO_FORA)
+    track2.mover_para(PONTO_FORA)
+    regra.checar(None, [track1, track2], "unknown", 1)
+
+    # Frame 2: Track 1 entra em PONTO_DENTRO (150, 150) -> dispara 1ª infração
+    track1.mover_para(PONTO_DENTRO)
+    infracoes_1 = _infracoes_de_invasao(regra.checar(None, [track1], "unknown", 2))
+    assert len(infracoes_1) == 1
+    assert infracoes_1[0]["track_id"] == 1
+
+    # Frame 10 (dentro do cooldown de 150 frames): Track 2 aparece na mesma posição (150, 150)
+    # Suprimido pelo cooldown por zona+posição (distância 0px < 40px)
+    track2.mover_para(PONTO_DENTRO)
+    infracoes_2 = _infracoes_de_invasao(regra.checar(None, [track2], "unknown", 10))
+    assert len(infracoes_2) == 0
+
+
+def test_dois_tracks_posicoes_distantes_dentro_cooldown_gera_duas_infracoes():
+    """
+    (b) Dois track_ids diferentes, posições distantes, dentro do cooldown → 2 infrações.
+    Dois veículos genuinamente diferentes na mesma zona protegida.
+    """
+    regra = RegraFaixaPedestre(lines=[], polygons=[POLIGONO], cooldown_frames=150, raio_posicao_px=40.0)
+    track1 = FakeTrack(1)
+    track2 = FakeTrack(2)
+
+    # Frame 1: ambos fora
+    track1.mover_para(PONTO_FORA)
+    track2.mover_para(PONTO_FORA)
+    regra.checar(None, [track1, track2], "unknown", 1)
+
+    # Frame 2: Track 1 entra em (120, 150) -> dispara 1ª infração
+    track1.mover_para((120, 150))
+    infracoes_1 = _infracoes_de_invasao(regra.checar(None, [track1], "unknown", 2))
+    assert len(infracoes_1) == 1
+    assert infracoes_1[0]["track_id"] == 1
+
+    # Frame 10 (dentro do cooldown): Track 2 entra em (180, 150), distância 60px > raio (40px)
+    # Deve disparar normalmente
+    track2.mover_para((180, 150))
+    infracoes_2 = _infracoes_de_invasao(regra.checar(None, [track2], "unknown", 10))
+    assert len(infracoes_2) == 1
+    assert infracoes_2[0]["track_id"] == 2
 
 
 def test_dentro_de_e_cooldown_sao_limpos_para_tracks_inativos():

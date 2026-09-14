@@ -1,16 +1,20 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="dark">
+
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CogniMove — Monitoramento Inteligente para Smart Cities</title>
-  <meta name="description" content="Plataforma de visão computacional para monitoramento de trânsito, detecção de infrações e análise de causa-raiz em tempo real — CogniMove FECART 2026."/>
-  <meta name="theme-color" content="#0F172A"/>
+  <meta name="description"
+    content="Plataforma de visão computacional para monitoramento de trânsito, detecção de infrações e análise de causa-raiz em tempo real — CogniMove FECART 2026." />
+  <meta name="theme-color" content="#0F172A" />
 
   <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
+    rel="stylesheet" />
 
   <!-- Tailwind — local copy for offline use (FECART) -->
   <script src="/static/js/tailwind.min.js"></script>
@@ -37,807 +41,1191 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
   <!-- Design System -->
-  <link rel="stylesheet" href="/static/css/style.css"/>
+  <link rel="stylesheet" href="/static/css/style.css" />
 </head>
+
 <body>
 
-<!-- ══ NAVBAR ══════════════════════════════════════════════════════════════ -->
-<nav id="cm-navbar" class="cm-navbar" role="navigation" aria-label="Menu principal">
-  <div class="cm-navbar__inner">
+  <!-- ══ NAVBAR ══════════════════════════════════════════════════════════════ -->
+  <nav id="cm-navbar" class="cm-navbar" role="navigation" aria-label="Menu principal">
+    <div class="cm-navbar__inner">
 
-    <!-- Logo -->
-    <a href="#inicio" class="cm-logo cm-nav-link" data-target="inicio" id="nav-logo" aria-label="CogniMove — Início">
-      <div class="cm-logo__icon" aria-hidden="true">
-        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-          <circle cx="14" cy="14" r="13" stroke="currentColor" stroke-width="2"/>
-          <path d="M8 14 L12 10 L16 16 L20 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="20" cy="12" r="2.5" fill="currentColor"/>
-        </svg>
+      <!-- Logo -->
+      <a href="#inicio" class="cm-logo cm-nav-link" data-target="inicio" id="nav-logo" aria-label="CogniMove — Início">
+        <div class="cm-logo__icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <circle cx="14" cy="14" r="13" stroke="currentColor" stroke-width="2" />
+            <path d="M8 14 L12 10 L16 16 L20 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+              stroke-linejoin="round" />
+            <circle cx="20" cy="12" r="2.5" fill="currentColor" />
+          </svg>
+        </div>
+        <span class="cm-logo__text">Cogni<span class="cm-logo__accent">Move</span></span>
+      </a>
+
+      <!-- Navigation links -->
+      <ul class="cm-nav__links" role="list">
+        <li><a href="#inicio" class="cm-nav-link cm-nav__item" data-target="inicio" id="navlink-inicio">Início</a></li>
+        <li><a href="#monitoramento" class="cm-nav-link cm-nav__item" data-target="monitoramento"
+            id="navlink-monitoramento">Monitoramento</a></li>
+        <li><a href="#analise" class="cm-nav-link cm-nav__item" data-target="analise" id="navlink-analise">Análise</a>
+        </li>
+        <li><a href="#relatorios" class="cm-nav-link cm-nav__item" data-target="relatorios"
+            id="navlink-relatorios">Relatórios</a></li>
+        <li><a href="#interatividade" class="cm-nav-link cm-nav__item" data-target="interatividade"
+            id="navlink-interatividade">Interatividade</a></li>
+        <li><a href="#sobre" class="cm-nav-link cm-nav__item" data-target="sobre" id="navlink-sobre">Sobre</a></li>
+      </ul>
+
+      <!-- Controls -->
+      <div class="cm-nav__controls">
+        <button id="btn-dark-toggle" class="cm-dark-toggle" aria-label="Alternar tema"
+          title="Alternar tema claro/escuro">
+          <span class="cm-dark-toggle__icon cm-dark-toggle__icon--moon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
+          </span>
+          <span class="cm-dark-toggle__icon cm-dark-toggle__icon--sun" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5" />
+              <line x1="12" y1="1" x2="12" y2="3" />
+              <line x1="12" y1="21" x2="12" y2="23" />
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+              <line x1="1" y1="12" x2="3" y2="12" />
+              <line x1="21" y1="12" x2="23" y2="12" />
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+            </svg>
+          </span>
+        </button>
       </div>
-      <span class="cm-logo__text">Cogni<span class="cm-logo__accent">Move</span></span>
-    </a>
 
-    <!-- Navigation links -->
-    <ul class="cm-nav__links" role="list">
-      <li><a href="#inicio"         class="cm-nav-link cm-nav__item" data-target="inicio"         id="navlink-inicio">Início</a></li>
-      <li><a href="#monitoramento"  class="cm-nav-link cm-nav__item" data-target="monitoramento"  id="navlink-monitoramento">Monitoramento</a></li>
-      <li><a href="#analise"        class="cm-nav-link cm-nav__item" data-target="analise"        id="navlink-analise">Análise</a></li>
-      <li><a href="#relatorios"     class="cm-nav-link cm-nav__item" data-target="relatorios"     id="navlink-relatorios">Relatórios</a></li>
-      <li><a href="#interatividade" class="cm-nav-link cm-nav__item" data-target="interatividade" id="navlink-interatividade">Interatividade</a></li>
-      <li><a href="#sobre"          class="cm-nav-link cm-nav__item" data-target="sobre"          id="navlink-sobre">Sobre</a></li>
-    </ul>
-
-    <!-- Controls -->
-    <div class="cm-nav__controls">
-      <button id="btn-dark-toggle" class="cm-dark-toggle" aria-label="Alternar tema" title="Alternar tema claro/escuro">
-        <span class="cm-dark-toggle__icon cm-dark-toggle__icon--moon" aria-hidden="true">🌙</span>
-        <span class="cm-dark-toggle__icon cm-dark-toggle__icon--sun"  aria-hidden="true">☀️</span>
-      </button>
     </div>
+  </nav>
 
-  </div>
-</nav>
+  <!-- ══ MAIN ════════════════════════════════════════════════════════════════ -->
+  <main id="cm-main">
 
-<!-- ══ MAIN ════════════════════════════════════════════════════════════════ -->
-<main id="cm-main">
-
-  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
        SEÇÃO 1: INÍCIO
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-  <section id="inicio" class="cm-section cm-section--active" aria-labelledby="h1-inicio">
+    <section id="inicio" class="cm-section cm-section--active" aria-labelledby="h1-inicio">
 
-    <!-- Hero -->
-    <div class="cm-hero">
+      <!-- Hero -->
+      <div class="cm-hero">
 
 
-      <div class="cm-hero__inner">
-        <!-- Left: text -->
-        <div class="cm-hero__text">
-          <div class="cm-hero__badge">
-            <span class="cm-badge-dot" aria-hidden="true"></span>
-            Sistema em Demonstração — FECART 2026
-          </div>
-          <h1 id="h1-inicio" class="cm-hero__headline">
-            Monitoramento<br>
-            <span class="cm-hero__accent">Inteligente</span><br>
-            para Smart Cities
-          </h1>
-          <p class="cm-hero__subtitle">
-            Visão computacional para monitoramento de trânsito,
-            identificação de infrações e análise inteligente de
-            causa‑raiz em cruzamentos urbanos.
-          </p>
-          <div class="cm-hero__actions">
-            <a href="#monitoramento" id="hero-cta-monitor"
-               class="cm-btn cm-btn--primary cm-nav-link" data-target="monitoramento">
-              ▶&nbsp; Ver Demonstração
-            </a>
-            <a href="#sobre" id="hero-cta-sobre"
-               class="cm-btn cm-btn--ghost cm-nav-link" data-target="sobre">
-              Saiba Mais
-            </a>
-          </div>
-          <div class="cm-hero__stats">
-            <div class="cm-hero__stat">
-              <span class="cm-hero__stat-value">3</span>
-              <span class="cm-hero__stat-label">Tipos de Infração</span>
+        <div class="cm-hero__inner">
+          <!-- Left: text -->
+          <div class="cm-hero__text">
+            <div class="cm-hero__badge">
+              <span class="cm-badge-dot" aria-hidden="true"></span>
+              Sistema em Demonstração — FECART 2026
             </div>
-            <div class="cm-hero__stat-sep" aria-hidden="true"></div>
-            <div class="cm-hero__stat">
-              <span class="cm-hero__stat-value">YOLOv8</span>
-              <span class="cm-hero__stat-label">Modelo de IA</span>
+            <h1 id="h1-inicio" class="cm-hero__headline">
+              Monitoramento<br>
+              <span class="cm-hero__accent">Inteligente</span><br>
+              para Smart Cities
+            </h1>
+            <p class="cm-hero__subtitle">
+              Visão computacional para monitoramento de trânsito,
+              identificação de infrações e análise inteligente de
+              causa‑raiz em cruzamentos urbanos.
+            </p>
+            <div class="cm-hero__actions">
+              <a href="#monitoramento" id="hero-cta-monitor" class="cm-btn cm-btn--primary cm-nav-link"
+                data-target="monitoramento">
+                ▶&nbsp; Ver Demonstração
+              </a>
+              <a href="#sobre" id="hero-cta-sobre" class="cm-btn cm-btn--ghost cm-nav-link" data-target="sobre">
+                Saiba Mais
+              </a>
             </div>
-            <div class="cm-hero__stat-sep" aria-hidden="true"></div>
-            <div class="cm-hero__stat">
-              <span class="cm-hero__stat-value">ByteTrack</span>
-              <span class="cm-hero__stat-label">Rastreamento</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Right: animated detection preview -->
-
-      </div>
-    </div><!-- /hero -->
-
-    <!-- Feature cards -->
-    <div class="cm-features">
-      <div class="cm-features__inner">
-        <a href="#monitoramento" id="feat-monitor"
-           class="cm-feature-card cm-nav-link" data-target="monitoramento" role="button">
-          <div class="cm-feature-card__icon" aria-hidden="true">📹</div>
-          <h3 class="cm-feature-card__title">Monitoramento</h3>
-          <p class="cm-feature-card__desc">Analise o vídeo e visualize as detecções conforme ocorrem em tempo real.</p>
-          <span class="cm-feature-card__arrow" aria-hidden="true">→</span>
-        </a>
-        <a href="#analise" id="feat-analise"
-           class="cm-feature-card cm-nav-link" data-target="analise" role="button">
-          <div class="cm-feature-card__icon" aria-hidden="true">🔍</div>
-          <h3 class="cm-feature-card__title">Análise</h3>
-          <p class="cm-feature-card__desc">Diagnóstico probabilístico de causa‑raiz com contexto urbano integrado.</p>
-          <span class="cm-feature-card__arrow" aria-hidden="true">→</span>
-        </a>
-        <a href="#relatorios" id="feat-relatorios"
-           class="cm-feature-card cm-nav-link" data-target="relatorios" role="button">
-          <div class="cm-feature-card__icon" aria-hidden="true">📊</div>
-          <h3 class="cm-feature-card__title">Relatórios</h3>
-          <p class="cm-feature-card__desc">Histórico de ocorrências selecionadas com distribuição e exportação CSV.</p>
-          <span class="cm-feature-card__arrow" aria-hidden="true">→</span>
-        </a>
-        <a href="#interatividade" id="feat-interativ"
-           class="cm-feature-card cm-nav-link" data-target="interatividade" role="button">
-          <div class="cm-feature-card__icon" aria-hidden="true">🎮</div>
-          <h3 class="cm-feature-card__title">Interatividade</h3>
-          <p class="cm-feature-card__desc">Compare sua percepção com a análise do CogniMove — Estação Interativa.</p>
-          <span class="cm-feature-card__arrow" aria-hidden="true">→</span>
-        </a>
-      </div>
-    </div>
-
-  </section>
-
-
-  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-       SEÇÃO 2: MONITORAMENTO
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-  <section id="monitoramento" class="cm-section" aria-labelledby="h2-monitor">
-    <div class="cm-page-header">
-      <div>
-        <h2 id="h2-monitor" class="cm-page-title">Monitoramento</h2>
-        <p class="cm-page-sub">Selecione um vídeo e visualize as detecções em tempo real.</p>
-      </div>
-    </div>
-
-    <div class="cm-monitor-layout">
-
-      <!-- Left: Video -->
-      <div class="cm-monitor-video-col">
-        <!-- Controls bar -->
-        <div class="cm-monitor-controls cm-card">
-          <div class="flex items-center gap-3 flex-wrap">
-            <select id="mon-video-select" class="cm-select" aria-label="Selecionar vídeo">
-              <option value="">— Selecione um vídeo —</option>
-              <option value="video_teste.mp4"  data-preset="cruzamento_centro">video_teste.mp4 — Cruzamento Centro</option>
-              <option value="video_teste2.mp4" data-preset="avenida_norte">video_teste2.mp4 — Avenida Norte</option>
-              <option value="video_teste3.mp4" data-preset="invasao_faixa">video_teste3.mp4 — Invasão de Faixa (sem semáforo)</option>
-            </select>
-            <button id="mon-btn-start" class="cm-btn cm-btn--primary" onclick="MonitorModule.start()" disabled>
-              ▶&nbsp; Iniciar
-            </button>
-            <button id="mon-btn-stop" class="cm-btn cm-btn--danger" onclick="MonitorModule.stop()" disabled>
-              ■&nbsp; Parar
-            </button>
-          </div>
-          <div id="mon-status-pill" class="cm-status-pill cm-status-pill--idle">
-            <span class="cm-badge-dot" id="mon-status-dot"></span>
-            <span id="mon-status-text">Aguardando</span>
-          </div>
-        </div>
-
-        <!-- Video feed -->
-        <div class="cm-video-wrapper cm-card" id="mon-video-wrapper">
-          <div class="cm-video-placeholder" id="mon-video-placeholder">
-            <div class="cm-video-placeholder__icon" aria-hidden="true">📷</div>
-            <p>Selecione um vídeo e clique em <strong>Iniciar</strong></p>
-          </div>
-          <img id="mon-video-feed" src="" alt="Feed de detecção ao vivo"
-               class="cm-video-feed hidden" aria-live="polite"/>
-          <div class="cm-video-overlay" id="mon-video-overlay">
-            <span class="cm-live-badge" id="mon-live-badge">
-              <span class="cm-badge-dot cm-badge-dot--red" aria-hidden="true"></span> LIVE
-            </span>
-          </div>
-        </div>
-
-        <!-- Camera info -->
-        <div class="cm-card cm-card--sm" id="mon-cam-info" style="display:none;">
-          <span class="cm-text-muted text-sm">📍</span>
-          <span class="text-sm" id="mon-cam-label">—</span>
-        </div>
-      </div>
-
-      <!-- Right: Sidebar log -->
-      <aside class="cm-monitor-sidebar">
-
-        <!-- Mini stats -->
-        <div class="cm-mini-stats" id="mon-mini-stats">
-          <div class="cm-mini-stat">
-            <span class="cm-mini-stat__value" id="mon-stat-total">0</span>
-            <span class="cm-mini-stat__label">Total</span>
-          </div>
-          <div class="cm-mini-stat cm-mini-stat--red">
-            <span class="cm-mini-stat__value" id="mon-stat-sinal">0</span>
-            <span class="cm-mini-stat__label">Sinal</span>
-          </div>
-          <div class="cm-mini-stat cm-mini-stat--amber">
-            <span class="cm-mini-stat__value" id="mon-stat-faixa">0</span>
-            <span class="cm-mini-stat__label">Faixa</span>
-          </div>
-          <div class="cm-mini-stat cm-mini-stat--blue">
-            <span class="cm-mini-stat__value" id="mon-stat-bloq">0</span>
-            <span class="cm-mini-stat__label">Bloqueio</span>
-          </div>
-        </div>
-
-        <!-- Event log -->
-        <div class="cm-card cm-log-panel">
-          <div class="cm-log-panel__header">
-            <span class="cm-label">Detecções ao Vivo</span>
-            <button class="cm-btn cm-btn--ghost cm-btn--xs" onclick="MonitorModule.clearLog()"
-                    id="mon-btn-clear" aria-label="Limpar log">Limpar</button>
-          </div>
-          <div class="cm-log-list" id="mon-log-list" role="log" aria-live="polite" aria-label="Log de infrações detectadas">
-            <div class="cm-log-empty" id="mon-log-empty">
-              <span aria-hidden="true">🔍</span>
-              Nenhuma infração detectada ainda
-            </div>
-          </div>
-        </div>
-
-      </aside>
-    </div>
-  </section>
-
-
-  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-       SEÇÃO 3: ANÁLISE
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-  <section id="analise" class="cm-section" aria-labelledby="h2-analise">
-    <div class="cm-page-header">
-      <div>
-        <h2 id="h2-analise" class="cm-page-title">Análise</h2>
-        <p class="cm-page-sub">Resultado da análise do frame selecionado do vídeo.</p>
-      </div>
-    </div>
-
-    <!-- Occurrence selector -->
-    <div class="cm-card cm-card--sm mb-6">
-      <label for="anal-occ-select" class="cm-label">Selecionar Ocorrência</label>
-      <div class="flex gap-3 items-center mt-2 flex-wrap">
-        <select id="anal-occ-select" class="cm-select" aria-label="Selecionar ocorrência curada"
-                onchange="AnaliseModule.selecionarOcorrencia(this.value)">
-          <option value="">— Carregando ocorrências… —</option>
-        </select>
-        <span class="cm-text-muted text-sm" id="anal-occ-count"></span>
-      </div>
-    </div>
-
-    <!-- Placeholder state -->
-    <div id="anal-placeholder" class="cm-empty-state cm-card">
-      <span class="cm-empty-state__icon" aria-hidden="true">⏳</span>
-      <p class="cm-empty-state__title">Processamento pendente</p>
-      <p class="cm-empty-state__sub">As ocorrências curadas serão populadas antes da apresentação.
-        <br><em>(Prompt 9 — checklist de revisão final)</em></p>
-    </div>
-
-    <!-- Analysis layout (hidden until data available) -->
-    <div id="anal-content" class="cm-analise-layout hidden">
-
-      <!-- Left: Occurrence card -->
-      <div class="cm-occurrence-card cm-card">
-        <div class="cm-occurrence-card__media">
-          <img id="anal-screenshot" src="" alt="Screenshot da infração detectada" class="cm-screenshot"/>
-          <div class="cm-occurrence-card__media-overlay">
-            <span class="cm-badge cm-badge--red" id="anal-tipo-badge">—</span>
-          </div>
-        </div>
-        <div class="cm-occurrence-card__meta">
-          <div class="cm-meta-row">
-            <span class="cm-meta-key">Timestamp</span>
-            <span class="cm-meta-val cm-mono" id="anal-timestamp">—</span>
-          </div>
-          <div class="cm-meta-row">
-            <span class="cm-meta-key">Tipo</span>
-            <span class="cm-meta-val" id="anal-tipo">—</span>
-          </div>
-          <div class="cm-meta-row">
-            <span class="cm-meta-key">Câmera</span>
-            <span class="cm-meta-val" id="anal-camera">—</span>
-          </div>
-          <div class="cm-meta-row">
-            <span class="cm-meta-key">Classe Detectada</span>
-            <span class="cm-meta-val" id="anal-classe">—</span>
-          </div>
-          <div class="cm-meta-row">
-            <span class="cm-meta-key">Track ID</span>
-            <span class="cm-meta-val cm-mono" id="anal-track">—</span>
-          </div>
-          <div class="cm-meta-row">
-            <span class="cm-meta-key">Confiança IA</span>
-            <div class="cm-conf-bar-wrap">
-              <div class="cm-conf-bar">
-                <div class="cm-conf-bar__fill" id="anal-conf-bar-fill" style="width:0%"></div>
+            <div class="cm-hero__stats">
+              <div class="cm-hero__stat">
+                <span class="cm-hero__stat-value">3</span>
+                <span class="cm-hero__stat-label">Tipos de Infração</span>
               </div>
-              <span class="cm-conf-val" id="anal-confianca">—</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Clip player -->
-        <div id="anal-clip-wrap" class="cm-clip-wrap hidden">
-          <p class="cm-label mb-2">Clipe da Ocorrência (~15s)</p>
-          <video id="anal-clip-player" class="cm-video-player" controls preload="metadata"
-                 aria-label="Clipe de vídeo da infração detectada">
-            Seu navegador não suporta o elemento video.
-          </video>
-        </div>
-      </div>
-
-      <!-- Right: Causa-raiz panel -->
-      <div class="cm-causa-panel cm-card">
-        <div class="cm-causa-panel__header">
-          <span class="cm-label">Causa-Raiz Provável</span>
-          <span class="cm-badge cm-badge--purple" id="anal-causa-badge">—</span>
-        </div>
-
-        <div class="cm-causa-main" id="anal-causa-main">
-          <p class="cm-causa-main__name" id="anal-causa-nome">—</p>
-          <div class="cm-causa-conf">
-            <div class="cm-conf-bar">
-              <div class="cm-conf-bar__fill cm-conf-bar__fill--purple" id="anal-causa-bar" style="width:0%"></div>
-            </div>
-            <span class="cm-causa-conf__val" id="anal-causa-pct">—</span>
-          </div>
-          <p class="cm-causa-disclaimer">
-            ⚠ Análise probabilística — não é prova definitiva de causa.
-          </p>
-        </div>
-
-        <!-- Distribution donut chart -->
-        <div class="cm-chart-wrap">
-          <p class="cm-label mb-3">Distribuição de Causas</p>
-          <div class="cm-donut-wrap">
-            <canvas id="anal-donut-chart" width="180" height="180"
-                    aria-label="Gráfico de distribuição de causas-raiz"></canvas>
-          </div>
-        </div>
-
-        <!-- Context factors -->
-        <div class="cm-causa-context" id="anal-contexto-wrap">
-          <p class="cm-label mb-2">Fatores de Contexto Ativos</p>
-          <div class="flex flex-wrap gap-2" id="anal-fatores-list">
-            <span class="cm-badge cm-badge--outline">Nenhum fator ativo</span>
-          </div>
-        </div>
-
-        <!-- Cause origin -->
-        <p class="cm-causa-origin text-sm cm-text-muted mt-3" id="anal-origem"></p>
-      </div>
-
-    </div><!-- /anal-content -->
-  </section>
-
-
-  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-       SEÇÃO 4: RELATÓRIOS
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-  <section id="relatorios" class="cm-section" aria-labelledby="h2-relatorios">
-    <div class="cm-page-header">
-      <div>
-        <h2 id="h2-relatorios" class="cm-page-title">Relatórios</h2>
-        <p class="cm-page-sub">Análise de um conjunto de ocorrências selecionadas anteriormente.</p>
-      </div>
-      <div class="flex gap-3 items-center">
-        <span class="cm-badge cm-badge--outline cm-mono" id="rel-count-badge">0 ocorrências</span>
-        <button id="rel-csv-btn" class="cm-btn cm-btn--outline" onclick="RelatorioModule.exportCSV()">
-          ↓&nbsp; Exportar CSV
-        </button>
-      </div>
-    </div>
-
-    <!-- KPI row -->
-    <div class="cm-kpi-row" id="rel-kpi-row">
-      <div class="cm-kpi-card cm-card">
-        <span class="cm-kpi-icon" aria-hidden="true">⚠️</span>
-        <span class="cm-kpi-value" id="rel-kpi-total">0</span>
-        <span class="cm-kpi-label">Total de Infrações</span>
-      </div>
-      <div class="cm-kpi-card cm-card">
-        <span class="cm-kpi-icon" aria-hidden="true">🤖</span>
-        <span class="cm-kpi-value" id="rel-kpi-conf">—</span>
-        <span class="cm-kpi-label">Confiança Média da IA</span>
-      </div>
-      <div class="cm-kpi-card cm-card">
-        <span class="cm-kpi-icon" aria-hidden="true">🚦</span>
-        <span class="cm-kpi-value" id="rel-kpi-top-tipo">—</span>
-        <span class="cm-kpi-label">Tipo Mais Frequente</span>
-      </div>
-    </div>
-
-    <!-- Charts row -->
-    <div class="cm-charts-row">
-
-      <!-- Donut: distribution by type -->
-      <div class="cm-card cm-chart-card">
-        <p class="cm-label mb-4">Distribuição das Infrações</p>
-        <div class="cm-donut-wrap cm-donut-wrap--lg">
-          <canvas id="rel-donut-chart" aria-label="Gráfico de pizza distribuição por tipo de infração"></canvas>
-        </div>
-        <div class="cm-chart-legend" id="rel-donut-legend" role="list" aria-label="Legenda do gráfico"></div>
-      </div>
-
-      <!-- Horizontal bar: top causes -->
-      <div class="cm-card cm-chart-card">
-        <p class="cm-label mb-4">Principais Causas Identificadas</p>
-        <div class="cm-bar-wrap">
-          <canvas id="rel-bar-chart" aria-label="Ranking de principais causas identificadas"></canvas>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Occurrences table -->
-    <div class="cm-card cm-table-card">
-      <div class="cm-table-header">
-        <p class="cm-label">Ocorrências Analisadas</p>
-        <span class="cm-text-muted text-sm" id="rel-occ-range"></span>
-      </div>
-
-      <div class="cm-table-wrap" id="rel-table-wrap">
-        <!-- Placeholder -->
-        <div class="cm-empty-state" id="rel-empty-state">
-          <span class="cm-empty-state__icon" aria-hidden="true">📋</span>
-          <p class="cm-empty-state__title">Nenhuma ocorrência registrada</p>
-          <p class="cm-empty-state__sub">Inicie o monitoramento para gerar registros.</p>
-        </div>
-
-        <table class="cm-table hidden" id="rel-table" aria-label="Tabela de ocorrências de infrações">
-          <thead>
-            <tr>
-              <th scope="col">Timestamp</th>
-              <th scope="col">Tipo</th>
-              <th scope="col">Câmera</th>
-              <th scope="col">Confiança</th>
-              <th scope="col">Causa Principal</th>
-              <th scope="col">Screenshot</th>
-            </tr>
-          </thead>
-          <tbody id="rel-table-body"></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-
-  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-       SEÇÃO 5: INTERATIVIDADE
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-  <section id="interatividade" class="cm-section" aria-labelledby="h2-interativ">
-    <div class="cm-page-header">
-      <div>
-        <h2 id="h2-interativ" class="cm-page-title">Estação Interativa</h2>
-        <p class="cm-page-sub">Compare sua percepção com a análise do CogniMove.</p>
-      </div>
-      <!-- Contador de ocorrências vistas -->
-      <div class="cm-counter-badge" id="wiz-counter" aria-live="polite">
-        <span id="wiz-counter-text">0 de 6 vistas</span>
-      </div>
-    </div>
-
-    <!-- Progress bar de 4 passos -->
-    <div class="cm-wizard-progress" role="list" aria-label="Progresso do quiz">
-      <div class="cm-wizard-step cm-wizard-step--active" id="wiz-step-1" role="listitem">
-        <div class="cm-wizard-step__dot">1</div>
-        <span class="cm-wizard-step__label">Início</span>
-      </div>
-      <div class="cm-wizard-step__line" aria-hidden="true"></div>
-      <div class="cm-wizard-step" id="wiz-step-2" role="listitem">
-        <div class="cm-wizard-step__dot">2</div>
-        <span class="cm-wizard-step__label">Vídeo</span>
-      </div>
-      <div class="cm-wizard-step__line" aria-hidden="true"></div>
-      <div class="cm-wizard-step" id="wiz-step-3" role="listitem">
-        <div class="cm-wizard-step__dot">3</div>
-        <span class="cm-wizard-step__label">Quiz</span>
-      </div>
-      <div class="cm-wizard-step__line" aria-hidden="true"></div>
-      <div class="cm-wizard-step" id="wiz-step-4" role="listitem">
-        <div class="cm-wizard-step__dot">4</div>
-        <span class="cm-wizard-step__label">Resultado</span>
-      </div>
-    </div>
-
-    <!-- ─── PAINEL 1: INÍCIO ──────────────────────────────────────────── -->
-    <div id="wiz-panel-1" class="cm-wizard-panel">
-      <div class="cm-wiz-inicio">
-        <div class="cm-wiz-inicio__icon" aria-hidden="true">🎮</div>
-        <h3 class="cm-wizard-title">Teste sua percepção!</h3>
-        <p class="cm-wizard-desc">
-          O sistema vai sortear automaticamente uma ocorrência de trânsito gravada.
-          Assista ao vídeo e depois responda: qual foi a infração detectada pelo CogniMove?
-        </p>
-        <div class="cm-wiz-inicio__rules">
-          <div class="cm-wiz-rule"><span class="cm-wiz-rule__icon">🎲</span><span>Sorteio automático — sem escolha manual</span></div>
-          <div class="cm-wiz-rule"><span class="cm-wiz-rule__icon">🔄</span><span>Até 6 ocorrências por sessão sem repetição</span></div>
-          <div class="cm-wiz-rule"><span class="cm-wiz-rule__icon">🤖</span><span>Confira a análise do CogniMove ao final</span></div>
-        </div>
-        <div id="wiz-sem-ocorrencias" class="cm-empty-state cm-card" style="display:none">
-          <span class="cm-empty-state__icon" aria-hidden="true">⏳</span>
-          <p class="cm-empty-state__title">Banco de ocorrências em preparação</p>
-          <p class="cm-empty-state__sub">Os vídeos GTA curados estarão disponíveis antes da apresentação FECART.</p>
-        </div>
-        <button id="wiz-btn-iniciar" class="cm-btn cm-btn--primary cm-btn--xl"
-                onclick="InteratividadeModule.sortearEIniciar()">
-          🎲&nbsp; Testar minha percepção
-        </button>
-      </div>
-    </div>
-
-    <!-- ─── PAINEL 2: VÍDEO ──────────────────────────────────────────── -->
-    <div id="wiz-panel-2" class="cm-wizard-panel hidden">
-      <h3 class="cm-wizard-title">Ocorrência sorteada</h3>
-      <p class="cm-wizard-desc">Assista ao vídeo com atenção. O tipo de infração só será revelado depois do quiz.</p>
-
-      <div class="cm-wizard-layout">
-        <div class="cm-wizard-video" style="flex:1">
-          <video id="wiz-clip-player" class="cm-video-player" controls preload="metadata"
-                 aria-label="Clipe de ocorrência sorteada">
-            Seu navegador não suporta o elemento video.
-          </video>
-          <div class="cm-wiz-clip-meta cm-card mt-3" id="wiz-clip-meta" style="display:none">
-            <span class="cm-label">Câmera:</span>
-            <span id="wiz-clip-camera" class="cm-text-muted">—</span>
-            &nbsp;·&nbsp;
-            <span class="cm-label">Confiança IA:</span>
-            <span id="wiz-clip-conf" class="cm-text-muted">—</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="cm-wizard-actions">
-        <button class="cm-btn cm-btn--ghost" onclick="InteratividadeModule.reiniciar()">
-          ✕&nbsp; Cancelar
-        </button>
-        <button id="wiz-btn-ir-quiz" class="cm-btn cm-btn--primary cm-btn--lg"
-                onclick="InteratividadeModule.irParaStep(3)">
-          Responder Quiz&nbsp; →
-        </button>
-      </div>
-    </div>
-
-    <!-- ─── PAINEL 3: QUIZ ──────────────────────────────────────────── -->
-    <div id="wiz-panel-3" class="cm-wizard-panel hidden">
-      <h3 class="cm-wizard-title">Qual foi a infração detectada?</h3>
-      <p class="cm-wizard-desc">Com base no vídeo assistido, escolha a infração que você identificou.</p>
-
-      <div class="cm-quiz-opcoes" id="wiz-quiz-opcoes" role="radiogroup" aria-label="Opções de infração">
-        <!-- Preenchido dinamicamente pelo JS -->
-      </div>
-
-      <div class="cm-wizard-actions">
-        <button class="cm-btn cm-btn--ghost" onclick="InteratividadeModule.irParaStep(2)">
-          ← Rever vídeo
-        </button>
-        <button id="wiz-btn-confirmar" class="cm-btn cm-btn--primary cm-btn--lg" disabled
-                onclick="InteratividadeModule.irParaStep(4)">
-          Confirmar Resposta&nbsp; →
-        </button>
-      </div>
-    </div>
-
-    <!-- ─── PAINEL 4: RESULTADO ─────────────────────────────────────── -->
-    <div id="wiz-panel-4" class="cm-wizard-panel hidden">
-      <div class="cm-resultado-header" id="wiz-resultado-header"></div>
-
-      <div class="cm-resultado-layout">
-
-        <!-- Left: Sua resposta -->
-        <div class="cm-resultado-col cm-card">
-          <h4 class="cm-resultado-col__title">Sua Resposta</h4>
-          <div class="cm-resultado-list">
-            <div class="cm-resultado-item">
-              <span class="cm-resultado-item__num">1.</span>
-              <span class="cm-resultado-item__text" id="wiz-user-tipo">—</span>
-            </div>
-            <div class="cm-resultado-item">
-              <span class="cm-resultado-item__num">2.</span>
-              <span class="cm-resultado-item__text" id="wiz-user-acerto">—</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Right: Análise CogniMove -->
-        <div class="cm-resultado-col cm-card">
-          <h4 class="cm-resultado-col__title">Análise do CogniMove</h4>
-          <div class="cm-resultado-list">
-            <div class="cm-resultado-item">
-              <span class="cm-resultado-item__num">1.</span>
-              <span class="cm-resultado-item__text" id="wiz-cm-tipo">—</span>
-            </div>
-            <div class="cm-resultado-item">
-              <span class="cm-resultado-item__num">2.</span>
-              <span class="cm-resultado-item__text">
-                Causa Raiz Probabilística:
-                <strong id="wiz-cm-causa">—</strong>
-                (<span id="wiz-cm-causa-pct">—</span>)
-              </span>
-            </div>
-            <div class="cm-resultado-item">
-              <span class="cm-resultado-item__num">3.</span>
-              <span class="cm-resultado-item__text" id="wiz-cm-fatores">Integração com dados urbanos: nenhum fator ativo</span>
+              <div class="cm-hero__stat-sep" aria-hidden="true"></div>
+              <div class="cm-hero__stat">
+                <span class="cm-hero__stat-value">YOLOv8</span>
+                <span class="cm-hero__stat-label">Modelo de IA</span>
+              </div>
+              <div class="cm-hero__stat-sep" aria-hidden="true"></div>
+              <div class="cm-hero__stat">
+                <span class="cm-hero__stat-value">ByteTrack</span>
+                <span class="cm-hero__stat-label">Rastreamento</span>
+              </div>
             </div>
           </div>
 
-          <div class="cm-resultado-infracao">
-            <span class="cm-label">Infração Identificada</span>
-            <span class="cm-badge cm-badge--red cm-badge--lg" id="wiz-cm-infracao-badge">—</span>
-            <span class="cm-badge cm-badge--green cm-badge--lg" id="wiz-cm-conf-badge">—</span>
+          <!-- Right: animated detection preview -->
+          <!-- TODO: trocar por screenshot real de evidência quando backend/outputs/ tiver dados -->
+          <div class="cm-hero__preview">
+            <div class="cm-det-frame">
+              <!-- Header bar -->
+              <div class="cm-det-frame__header">
+                <div class="cm-det-live">
+                  <span class="cm-badge-dot cm-badge-dot--red" aria-hidden="true"></span>
+                  <span>REC · LIVE</span>
+                </div>
+                <span class="cm-det-cam">CAM-01 · Cruzamento Centro</span>
+                <div class="cm-det-fps cm-mono">30 FPS</div>
+              </div>
+
+              <!-- Annotated detection scene -->
+              <div class="cm-det-scene" role="img"
+                aria-label="Mockup de vídeo monitorado com detecções de veículos, pedestres e semáforos">
+                <div class="cm-det-scanline" aria-hidden="true"></div>
+
+                <!-- Reticle corners -->
+                <span class="cm-det-corner cm-det-corner--tl" aria-hidden="true"></span>
+                <span class="cm-det-corner cm-det-corner--tr" aria-hidden="true"></span>
+                <span class="cm-det-corner cm-det-corner--bl" aria-hidden="true"></span>
+                <span class="cm-det-corner cm-det-corner--br" aria-hidden="true"></span>
+
+                <!-- Bounding box 1: Semáforo (Vermelho) -->
+                <div class="cm-det-box cm-det-box--signal">
+                  <span class="cm-det-lbl">Semáforo 95%</span>
+                </div>
+
+                <!-- Bounding box 2: Carro (Ciano / Azul) -->
+                <div class="cm-det-box cm-det-box--car">
+                  <span class="cm-det-lbl">Carro 88%</span>
+                </div>
+
+                <!-- Bounding box 3: Pessoa / Pedestre (Roxo / Magenta) -->
+                <div class="cm-det-box cm-det-box--ped">
+                  <span class="cm-det-lbl">Pessoa 91%</span>
+                </div>
+
+                <!-- Bounding box 4: Carro secundário (Azul) -->
+                <div class="cm-det-box cm-det-box--car2">
+                  <span class="cm-det-lbl">Carro 92%</span>
+                </div>
+
+                <!-- Alert overlay -->
+                <div class="cm-det-alert cm-det-alert--pulse">
+                  <span class="cm-det-alert__icon" aria-hidden="true">⚠️</span>
+                  <span>AVANÇO PROVÁVEL</span>
+                </div>
+
+                <!-- Overlay Confidence / Model -->
+                <div class="cm-det-conf">
+                  <span class="cm-det-conf__label">Modelo Ativo</span>
+                  <span class="cm-det-conf__value">YOLOv8n</span>
+                </div>
+              </div>
+
+              <!-- Footer bar -->
+              <div class="cm-det-frame__footer">
+                <span>ByteTrack ID #108</span>
+                <span>Latência: 18ms</span>
+                <span>4 detecções</span>
+              </div>
+            </div>
           </div>
 
-          <div class="mt-4">
-            <p class="cm-label mb-2">Prováveis Causas de Ocorrência</p>
-            <div id="wiz-causas-list" class="cm-causas-bars"></div>
-          </div>
-
-          <div class="cm-donut-wrap mt-4">
-            <canvas id="wiz-donut-chart" width="140" height="140"
-                    aria-label="Distribuição de causas prováveis"></canvas>
-          </div>
         </div>
+      </div><!-- /hero -->
 
-      </div>
-
-      <div class="cm-wizard-actions mt-6">
-        <button class="cm-btn cm-btn--ghost" onclick="InteratividadeModule.irParaStep(2)">
-          ← Ver vídeo novamente
-        </button>
-        <button class="cm-btn cm-btn--primary" onclick="InteratividadeModule.reiniciar()">
-          🎲&nbsp; Próxima ocorrência
-        </button>
-      </div>
-    </div>
-
-  </section>
-
-
-
-
-
-  <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-       SEÇÃO 6: SOBRE
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
-  <section id="sobre" class="cm-section" aria-labelledby="h2-sobre">
-    <div class="cm-sobre-layout">
-
-      <!-- Left column: description + team -->
-      <div class="cm-sobre-main">
-
-        <div class="cm-card cm-card--featured mb-6">
-          <div class="cm-sobre-logo" aria-hidden="true">
-            <div class="cm-sobre-logo__icon">
-              <svg width="48" height="48" viewBox="0 0 28 28" fill="none">
-                <circle cx="14" cy="14" r="13" stroke="currentColor" stroke-width="2"/>
-                <path d="M8 14 L12 10 L16 16 L20 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                <circle cx="20" cy="12" r="2.5" fill="currentColor"/>
+      <!-- Feature cards -->
+      <div class="cm-features">
+        <div class="cm-features__inner">
+          <a href="#monitoramento" id="feat-monitor" class="cm-feature-card cm-feature-card--highlight cm-nav-link"
+            data-target="monitoramento" role="button">
+            <span class="cm-feature-card__badge">
+              <span class="cm-badge-dot cm-badge-dot--red" aria-hidden="true"></span>
+              Ao vivo
+            </span>
+            <div class="cm-feature-card__icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="23 7 16 12 23 17 23 7" />
+                <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
               </svg>
             </div>
-            <div>
-              <span class="cm-sobre-logo__name">CogniMove</span>
-              <span class="cm-sobre-logo__tagline">Tecnologia a favor de cidades mais seguras.</span>
+            <h3 class="cm-feature-card__title">Monitoramento</h3>
+            <p class="cm-feature-card__desc">Analise o vídeo e visualize as detecções conforme ocorrem em tempo real.
+            </p>
+            <span class="cm-feature-card__arrow" aria-hidden="true">→</span>
+          </a>
+          <a href="#analise" id="feat-analise" class="cm-feature-card cm-nav-link" data-target="analise" role="button">
+            <div class="cm-feature-card__icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                <line x1="11" y1="8" x2="11" y2="14" />
+                <line x1="8" y1="11" x2="14" y2="11" />
+              </svg>
+            </div>
+            <h3 class="cm-feature-card__title">Análise</h3>
+            <p class="cm-feature-card__desc">Diagnóstico probabilístico de causa‑raiz com contexto urbano integrado.</p>
+            <span class="cm-feature-card__arrow" aria-hidden="true">→</span>
+          </a>
+          <a href="#relatorios" id="feat-relatorios" class="cm-feature-card cm-nav-link" data-target="relatorios"
+            role="button">
+            <div class="cm-feature-card__icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10" />
+                <line x1="12" y1="20" x2="12" y2="4" />
+                <line x1="6" y1="20" x2="6" y2="14" />
+                <line x1="2" y1="20" x2="22" y2="20" />
+              </svg>
+            </div>
+            <h3 class="cm-feature-card__title">Relatórios</h3>
+            <p class="cm-feature-card__desc">Histórico de ocorrências selecionadas com distribuição e exportação CSV.
+            </p>
+            <span class="cm-feature-card__arrow" aria-hidden="true">→</span>
+          </a>
+          <a href="#interatividade" id="feat-interativ" class="cm-feature-card cm-nav-link" data-target="interatividade"
+            role="button">
+            <div class="cm-feature-card__icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="6" width="20" height="12" rx="4" />
+                <line x1="6" y1="12" x2="10" y2="12" />
+                <line x1="8" y1="10" x2="8" y2="14" />
+                <circle cx="16" cy="10" r="1" fill="currentColor" />
+                <circle cx="18" cy="13" r="1" fill="currentColor" />
+              </svg>
+            </div>
+            <h3 class="cm-feature-card__title">Interatividade</h3>
+            <p class="cm-feature-card__desc">Compare sua percepção com a análise do CogniMove — Estação Interativa.</p>
+            <span class="cm-feature-card__arrow" aria-hidden="true">→</span>
+          </a>
+        </div>
+      </div>
+
+    </section>
+
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       SEÇÃO 2: MONITORAMENTO
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <section id="monitoramento" class="cm-section" aria-labelledby="h2-monitor">
+      <div class="cm-page-header">
+        <div>
+          <h2 id="h2-monitor" class="cm-page-title">Monitoramento</h2>
+          <p class="cm-page-sub">Selecione um vídeo e visualize as detecções em tempo real.</p>
+        </div>
+      </div>
+
+      <div class="cm-monitor-layout">
+
+        <!-- Left: Video -->
+        <div class="cm-monitor-video-col">
+          <!-- Controls bar -->
+          <div class="cm-monitor-controls cm-card">
+            <div class="flex items-center gap-3 flex-wrap">
+              <select id="mon-video-select" class="cm-select" aria-label="Selecionar vídeo">
+                <option value="">— Selecione um vídeo —</option>
+                <option value="video_teste_recorte.mp4" data-preset="cruzamento_centro">video_teste_recorte.mp4 —
+                  Cruzamento Centro</option>
+                <option value="video_teste2_recorte.mp4" data-preset="avenida_norte">video_teste2_recorte.mp4 — Avenida
+                  Norte</option>
+                <option value="video_teste3_recorte.mp4" data-preset="invasao_faixa">video_teste3_recorte.mp4 — Invasão
+                  de Faixa</option>
+                <option value="video_teste5_recorte.mp4" data-preset="gta2">video_teste5_recorte.mp4 — Simulação (GTA)
+                </option>
+              </select>
+              <button id="mon-btn-start" class="cm-btn cm-btn--primary" onclick="MonitorModule.start()" disabled>
+                ▶&nbsp; Iniciar
+              </button>
+              <button id="mon-btn-stop" class="cm-btn cm-btn--danger" onclick="MonitorModule.stop()" disabled>
+                ■&nbsp; Parar
+              </button>
+            </div>
+            <div id="mon-status-pill" class="cm-status-pill cm-status-pill--idle">
+              <span class="cm-badge-dot" id="mon-status-dot"></span>
+              <span id="mon-status-text">Aguardando</span>
             </div>
           </div>
-          <h2 id="h2-sobre" class="cm-page-title mt-4">Sobre o CogniMove</h2>
-          <p class="cm-sobre-desc">
-            O CogniMove é uma plataforma de monitoramento inteligente de trânsito que utiliza
-            visão computacional (YOLOv8 + ByteTrack) para identificação automática de infrações
-            e análise probabilística de causa‑raiz com base em contexto urbano.
-          </p>
-          <p class="cm-sobre-desc mt-3">
-            O sistema detecta três tipos de infrações — avanço de sinal vermelho, invasão de
-            faixa de pedestres/bike box e bloqueio de cruzamento — gerando evidências visuais
-            (screenshot + clipe de vídeo) e registros auditáveis em CSV e JSON Lines para
-            cada ocorrência.
-          </p>
+
+          <!-- Video feed -->
+          <div class="cm-video-wrapper cm-card" id="mon-video-wrapper">
+            <div class="cm-video-placeholder" id="mon-video-placeholder">
+              <div class="cm-video-placeholder__icon" aria-hidden="true">
+                <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+              </div>
+              <p>Selecione um vídeo e clique em <strong>Iniciar</strong></p>
+            </div>
+            <img id="mon-video-feed" src="" alt="Feed de detecção ao vivo" class="cm-video-feed hidden"
+              aria-live="polite" />
+            <div class="cm-video-overlay" id="mon-video-overlay">
+              <span class="cm-live-badge" id="mon-live-badge">
+                <span class="cm-badge-dot cm-badge-dot--red" aria-hidden="true"></span> LIVE
+              </span>
+            </div>
+          </div>
+
+          <!-- Camera info -->
+          <div class="cm-card cm-card--sm" id="mon-cam-info" style="display:none;">
+            <span class="cm-text-muted text-sm" style="display:inline-flex;vertical-align:middle;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+            </span>
+            <span class="text-sm" id="mon-cam-label">—</span>
+          </div>
         </div>
 
-        <!-- Team -->
-        <div class="cm-card">
-          <p class="cm-label mb-4">Equipe</p>
-          <div class="cm-team-grid">
-            <div class="cm-team-member">
-              <div class="cm-team-member__avatar" aria-hidden="true">👩‍💻</div>
-              <div>
-                <p class="cm-team-member__name">Manuella Moretti Landim</p>
-                <p class="cm-team-member__role">Equipe do Projeto</p>
+        <!-- Right: Sidebar log -->
+        <aside class="cm-monitor-sidebar">
+
+          <!-- Classes detectadas na cena (contadores por classe) -->
+          <!-- TODO: aguardando backend expor contagem por classe -->
+          <div class="cm-class-stats" id="mon-class-stats">
+            <div class="cm-class-stats__header">
+              <span class="cm-label">Classes Detectadas</span>
+              <span class="cm-mono cm-text-muted" style="font-size: .7rem;">ao vivo</span>
+            </div>
+            <div class="cm-class-list">
+              <div class="cm-class-stat cm-class-stat--car">
+                <span class="cm-class-stat__icon" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path
+                      d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+                    <circle cx="7" cy="17" r="2" />
+                    <path d="M9 17h6" />
+                    <circle cx="17" cy="17" r="2" />
+                  </svg>
+                </span>
+                <span class="cm-class-stat__label">Carros</span>
+                <span class="cm-class-stat__value" id="mon-class-carros">0</span>
+              </div>
+              <div class="cm-class-stat cm-class-stat--moto">
+                <span class="cm-class-stat__icon" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="5.5" cy="17.5" r="3.5" />
+                    <circle cx="18.5" cy="17.5" r="3.5" />
+                    <path d="M15 6h-3l-3 6.5h6l1.5-3.5H19" />
+                    <path d="M8 17.5l2-5" />
+                    <path d="M16 17.5l-2-5" />
+                  </svg>
+                </span>
+                <span class="cm-class-stat__label">Motos</span>
+                <span class="cm-class-stat__value" id="mon-class-motos">0</span>
+              </div>
+              <div class="cm-class-stat cm-class-stat--person">
+                <span class="cm-class-stat__icon" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                </span>
+                <span class="cm-class-stat__label">Pessoas</span>
+                <span class="cm-class-stat__value" id="mon-class-pessoas">0</span>
+              </div>
+              <div class="cm-class-stat cm-class-stat--light">
+                <span class="cm-class-stat__icon" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="6" y="2" width="12" height="20" rx="4" />
+                    <circle cx="12" cy="7" r="2" />
+                    <circle cx="12" cy="12" r="2" />
+                    <circle cx="12" cy="17" r="2" />
+                  </svg>
+                </span>
+                <span class="cm-class-stat__label">Semáforos</span>
+                <span class="cm-class-stat__value" id="mon-class-semaforos">0</span>
               </div>
             </div>
-            <div class="cm-team-member">
-              <div class="cm-team-member__avatar" aria-hidden="true">👩‍💻</div>
-              <div>
-                <p class="cm-team-member__name">Melissa Nunes de Oliveira</p>
-                <p class="cm-team-member__role">Equipe do Projeto</p>
+          </div>
+
+          <!-- Mini stats (Infrações) -->
+          <div class="cm-label" style="padding: 0 .25rem; margin-top: .25rem;">Infrações</div>
+          <div class="cm-mini-stats" id="mon-mini-stats">
+            <div class="cm-mini-stat">
+              <span class="cm-mini-stat__icon" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="7" height="7" />
+                  <rect x="14" y="3" width="7" height="7" />
+                  <rect x="14" y="14" width="7" height="7" />
+                  <rect x="3" y="14" width="7" height="7" />
+                </svg>
+              </span>
+              <span class="cm-mini-stat__value" id="mon-stat-total">0</span>
+              <span class="cm-mini-stat__label">Total</span>
+            </div>
+            <div class="cm-mini-stat cm-mini-stat--red">
+              <span class="cm-mini-stat__icon" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="6" y="2" width="12" height="20" rx="4" />
+                  <circle cx="12" cy="7" r="2" />
+                  <circle cx="12" cy="12" r="2" />
+                  <circle cx="12" cy="17" r="2" />
+                </svg>
+              </span>
+              <span class="cm-mini-stat__value" id="mon-stat-sinal">0</span>
+              <span class="cm-mini-stat__label">Sinal</span>
+            </div>
+            <div class="cm-mini-stat cm-mini-stat--amber">
+              <span class="cm-mini-stat__icon" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                  <line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+              </span>
+              <span class="cm-mini-stat__value" id="mon-stat-faixa">0</span>
+              <span class="cm-mini-stat__label">Faixa</span>
+            </div>
+            <div class="cm-mini-stat cm-mini-stat--blue">
+              <span class="cm-mini-stat__icon" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="6" width="18" height="12" rx="2" />
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                  <line x1="9" y1="6" x2="9" y2="18" />
+                  <line x1="15" y1="6" x2="15" y2="18" />
+                </svg>
+              </span>
+              <span class="cm-mini-stat__value" id="mon-stat-bloq">0</span>
+              <span class="cm-mini-stat__label">Bloqueio</span>
+            </div>
+          </div>
+
+          <!-- Event log -->
+          <div class="cm-card cm-log-panel">
+            <div class="cm-log-panel__header">
+              <span class="cm-label">Detecções ao Vivo</span>
+              <button class="cm-btn cm-btn--ghost cm-btn--xs" onclick="MonitorModule.clearLog()" id="mon-btn-clear"
+                aria-label="Limpar log">Limpar</button>
+            </div>
+            <div class="cm-log-list" id="mon-log-list" role="log" aria-live="polite"
+              aria-label="Log de infrações detectadas">
+              <div class="cm-log-empty" id="mon-log-empty">
+                <span class="cm-empty-icon" aria-hidden="true">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                </span>
+                Nenhuma infração detectada ainda
               </div>
             </div>
-            <div class="cm-team-member">
-              <div class="cm-team-member__avatar" aria-hidden="true">👩‍💻</div>
-              <div>
-                <p class="cm-team-member__name">Raíssa Ramos</p>
-                <p class="cm-team-member__role">Equipe do Projeto</p>
+          </div>
+
+        </aside>
+      </div>
+    </section>
+
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       SEÇÃO 3: ANÁLISE
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <section id="analise" class="cm-section" aria-labelledby="h2-analise">
+      <div class="cm-page-header">
+        <div>
+          <h2 id="h2-analise" class="cm-page-title">Análise</h2>
+          <p class="cm-page-sub">Resultado da análise do frame selecionado do vídeo.</p>
+        </div>
+      </div>
+
+      <!-- Occurrence selector -->
+      <div class="cm-card cm-card--sm mb-6">
+        <label for="anal-occ-select" class="cm-label">Selecionar Ocorrência</label>
+        <div class="flex gap-3 items-center mt-2 flex-wrap">
+          <select id="anal-occ-select" class="cm-select" aria-label="Selecionar ocorrência curada"
+            onchange="AnaliseModule.selecionarOcorrencia(this.value)">
+            <option value="">— Carregando ocorrências… —</option>
+          </select>
+          <span class="cm-text-muted text-sm" id="anal-occ-count"></span>
+        </div>
+      </div>
+
+      <!-- Placeholder state -->
+      <div id="anal-placeholder" class="cm-empty-state cm-card">
+        <span class="cm-empty-state__icon" aria-hidden="true">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+        </span>
+        <p class="cm-empty-state__title">Processamento pendente</p>
+        <p class="cm-empty-state__sub">As ocorrências curadas serão populadas antes da apresentação.
+          <br><em>(Prompt 9 — checklist de revisão final)</em>
+        </p>
+      </div>
+
+      <!-- Analysis layout (hidden until data available) -->
+      <div id="anal-content" class="cm-analise-layout hidden">
+
+        <!-- Left: Occurrence card -->
+        <div class="cm-occurrence-card cm-card">
+          <div class="cm-occurrence-card__media">
+            <img id="anal-screenshot" src="" alt="Screenshot da infração detectada" class="cm-screenshot" />
+            <div class="cm-occurrence-card__media-overlay">
+              <span class="cm-badge cm-badge--red" id="anal-tipo-badge">—</span>
+            </div>
+          </div>
+          <div class="cm-occurrence-card__meta">
+            <div class="cm-meta-row">
+              <span class="cm-meta-key">Timestamp</span>
+              <span class="cm-meta-val cm-mono" id="anal-timestamp">—</span>
+            </div>
+            <div class="cm-meta-row">
+              <span class="cm-meta-key">Tipo</span>
+              <span class="cm-meta-val" id="anal-tipo">—</span>
+            </div>
+            <div class="cm-meta-row">
+              <span class="cm-meta-key">Câmera</span>
+              <span class="cm-meta-val" id="anal-camera">—</span>
+            </div>
+            <div class="cm-meta-row">
+              <span class="cm-meta-key">Classe Detectada</span>
+              <span class="cm-meta-val" id="anal-classe">—</span>
+            </div>
+            <div class="cm-meta-row">
+              <span class="cm-meta-key">Track ID</span>
+              <span class="cm-meta-val cm-mono" id="anal-track">—</span>
+            </div>
+            <div class="cm-meta-row">
+              <span class="cm-meta-key">Confiança IA</span>
+              <div class="cm-conf-bar-wrap">
+                <div class="cm-conf-bar">
+                  <div class="cm-conf-bar__fill" id="anal-conf-bar-fill" style="width:0%"></div>
+                </div>
+                <span class="cm-conf-val" id="anal-confianca">—</span>
               </div>
             </div>
+          </div>
+
+          <!-- Clip player -->
+          <div id="anal-clip-wrap" class="cm-clip-wrap hidden">
+            <p class="cm-label mb-2">Clipe da Ocorrência (~15s)</p>
+            <video id="anal-clip-player" class="cm-video-player" controls preload="metadata"
+              aria-label="Clipe de vídeo da infração detectada">
+              Seu navegador não suporta o elemento video.
+            </video>
+          </div>
+        </div>
+
+        <!-- Right: Causa-raiz panel -->
+        <div class="cm-causa-panel cm-card">
+          <div class="cm-causa-panel__header">
+            <span class="cm-label">Causa-Raiz Provável</span>
+            <span class="cm-badge cm-badge--purple" id="anal-causa-badge">—</span>
+          </div>
+
+          <div class="cm-causa-main" id="anal-causa-main">
+            <p class="cm-causa-main__name" id="anal-causa-nome">—</p>
+            <div class="cm-causa-conf">
+              <div class="cm-conf-bar">
+                <div class="cm-conf-bar__fill cm-conf-bar__fill--purple" id="anal-causa-bar" style="width:0%"></div>
+              </div>
+              <span class="cm-causa-conf__val" id="anal-causa-pct">—</span>
+            </div>
+            <p class="cm-causa-disclaimer">
+              ⚠ Análise probabilística — não é prova definitiva de causa.
+            </p>
+          </div>
+
+          <!-- Distribution donut chart -->
+          <div class="cm-chart-wrap">
+            <p class="cm-label mb-3">Distribuição de Causas</p>
+            <div class="cm-donut-wrap">
+              <canvas id="anal-donut-chart" width="180" height="180"
+                aria-label="Gráfico de distribuição de causas-raiz"></canvas>
+            </div>
+          </div>
+
+          <!-- Context factors -->
+          <div class="cm-causa-context" id="anal-contexto-wrap">
+            <p class="cm-label mb-2">Fatores de Contexto Ativos</p>
+            <div class="flex flex-wrap gap-2" id="anal-fatores-list">
+              <span class="cm-badge cm-badge--outline">Nenhum fator ativo</span>
+            </div>
+          </div>
+
+          <!-- Cause origin -->
+          <p class="cm-causa-origin text-sm cm-text-muted mt-3" id="anal-origem"></p>
+        </div>
+
+      </div><!-- /anal-content -->
+    </section>
+
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       SEÇÃO 4: RELATÓRIOS
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <section id="relatorios" class="cm-section" aria-labelledby="h2-relatorios">
+      <div class="cm-page-header">
+        <div>
+          <h2 id="h2-relatorios" class="cm-page-title">Relatórios</h2>
+          <p class="cm-page-sub">Análise de um conjunto de ocorrências selecionadas anteriormente.</p>
+        </div>
+        <div class="flex gap-3 items-center">
+          <span class="cm-badge cm-badge--outline cm-mono" id="rel-count-badge">0 ocorrências</span>
+          <button id="rel-csv-btn" class="cm-btn cm-btn--outline" onclick="RelatorioModule.exportCSV()">
+            ↓&nbsp; Exportar CSV
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI row -->
+      <div class="cm-kpi-row" id="rel-kpi-row">
+        <div class="cm-kpi-card cm-card">
+          <span class="cm-kpi-icon" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+          </span>
+          <span class="cm-kpi-value" id="rel-kpi-total">0</span>
+          <span class="cm-kpi-label">Total de Infrações</span>
+        </div>
+        <div class="cm-kpi-card cm-card">
+          <span class="cm-kpi-icon" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+              stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="4" width="16" height="16" rx="2" />
+              <rect x="9" y="9" width="6" height="6" />
+              <line x1="9" y1="1" x2="9" y2="4" />
+              <line x1="15" y1="1" x2="15" y2="4" />
+              <line x1="9" y1="20" x2="9" y2="23" />
+              <line x1="15" y1="20" x2="15" y2="23" />
+              <line x1="20" y1="9" x2="23" y2="9" />
+              <line x1="20" y1="14" x2="23" y2="14" />
+              <line x1="1" y1="9" x2="4" y2="9" />
+              <line x1="1" y1="14" x2="4" y2="14" />
+            </svg>
+          </span>
+          <span class="cm-kpi-value" id="rel-kpi-conf">—</span>
+          <span class="cm-kpi-label">Confiança Média da IA</span>
+        </div>
+        <div class="cm-kpi-card cm-card">
+          <span class="cm-kpi-icon" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+              stroke-linecap="round" stroke-linejoin="round">
+              <rect x="6" y="2" width="12" height="20" rx="4" />
+              <circle cx="12" cy="7" r="2" />
+              <circle cx="12" cy="12" r="2" />
+              <circle cx="12" cy="17" r="2" />
+            </svg>
+          </span>
+          <span class="cm-kpi-value" id="rel-kpi-top-tipo">—</span>
+          <span class="cm-kpi-label">Tipo Mais Frequente</span>
+        </div>
+      </div>
+
+      <!-- Charts row -->
+      <div class="cm-charts-row">
+
+        <!-- Donut: distribution by type -->
+        <div class="cm-card cm-chart-card">
+          <p class="cm-label mb-4">Distribuição das Infrações</p>
+          <div class="cm-donut-flex">
+            <div class="cm-donut-wrap cm-donut-wrap--lg">
+              <canvas id="rel-donut-chart" width="220" height="220"
+                aria-label="Gráfico de pizza distribuição por tipo de infração"></canvas>
+            </div>
+            <div class="cm-chart-legend" id="rel-donut-legend" role="list" aria-label="Legenda do gráfico"></div>
+          </div>
+        </div>
+
+        <!-- Horizontal bar: top causes -->
+        <div class="cm-card cm-chart-card">
+          <p class="cm-label mb-4">Principais Causas Identificadas</p>
+          <div class="cm-bar-wrap">
+            <canvas id="rel-bar-chart" aria-label="Ranking de principais causas identificadas"></canvas>
           </div>
         </div>
 
       </div>
 
-      <!-- Right column: tech + architecture -->
-      <div class="cm-sobre-sidebar">
+      <!-- Occurrences table -->
+      <div class="cm-card cm-table-card">
+        <div class="cm-table-header">
+          <p class="cm-label">Ocorrências Analisadas</p>
+          <span class="cm-text-muted text-sm" id="rel-occ-range"></span>
+        </div>
 
-        <!-- Tech stack -->
-        <div class="cm-card mb-6">
-          <p class="cm-label mb-4">Tecnologias</p>
-          <div class="cm-tech-grid">
-            <div class="cm-tech-item">
-              <span class="cm-tech-icon" aria-hidden="true">🔍</span>
-              <span class="cm-tech-name">YOLOv8</span>
-              <span class="cm-tech-role">Detecção de Objetos</span>
-            </div>
-            <div class="cm-tech-item">
-              <span class="cm-tech-icon" aria-hidden="true">🎯</span>
-              <span class="cm-tech-name">ByteTrack</span>
-              <span class="cm-tech-role">Rastreamento Multi‑objeto</span>
-            </div>
-            <div class="cm-tech-item">
-              <span class="cm-tech-icon" aria-hidden="true">🐍</span>
-              <span class="cm-tech-name">Python / Flask</span>
-              <span class="cm-tech-role">Backend & API</span>
-            </div>
-            <div class="cm-tech-item">
-              <span class="cm-tech-icon" aria-hidden="true">📊</span>
-              <span class="cm-tech-name">Chart.js</span>
-              <span class="cm-tech-role">Visualização de Dados</span>
-            </div>
-            <div class="cm-tech-item">
-              <span class="cm-tech-icon" aria-hidden="true">🎥</span>
-              <span class="cm-tech-name">OpenCV</span>
-              <span class="cm-tech-role">Processamento de Vídeo</span>
-            </div>
-            <div class="cm-tech-item">
-              <span class="cm-tech-icon" aria-hidden="true">🏙️</span>
-              <span class="cm-tech-name">Banco de Dados Urbanos</span>
-              <span class="cm-tech-role">Contexto & Causa‑Raiz</span>
-            </div>
+        <div class="cm-table-wrap" id="rel-table-wrap">
+          <!-- Placeholder -->
+          <div class="cm-empty-state" id="rel-empty-state">
+            <span class="cm-empty-state__icon" aria-hidden="true">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <polyline points="10 9 9 9 8 9" />
+              </svg>
+            </span>
+            <p class="cm-empty-state__title">Nenhuma ocorrência registrada</p>
+            <p class="cm-empty-state__sub">Inicie o monitoramento para gerar registros.</p>
           </div>
-        </div>
 
-        <!-- System flow -->
-        <div class="cm-card">
-          <p class="cm-label mb-4">Fluxo do Sistema</p>
-          <div class="cm-flow">
-            <div class="cm-flow-step"><span class="cm-flow-dot" aria-hidden="true"></span><span>Vídeo de entrada (arquivo ou câmera)</span></div>
-            <div class="cm-flow-arrow" aria-hidden="true">↓</div>
-            <div class="cm-flow-step"><span class="cm-flow-dot" aria-hidden="true"></span><span>YOLOv8 — Detecção de objetos</span></div>
-            <div class="cm-flow-arrow" aria-hidden="true">↓</div>
-            <div class="cm-flow-step"><span class="cm-flow-dot" aria-hidden="true"></span><span>ByteTrack — Rastreamento multi-objeto</span></div>
-            <div class="cm-flow-arrow" aria-hidden="true">↓</div>
-            <div class="cm-flow-step"><span class="cm-flow-dot" aria-hidden="true"></span><span>Motor de Regras (Sinal / Faixa / Bloqueio)</span></div>
-            <div class="cm-flow-arrow" aria-hidden="true">↓</div>
-            <div class="cm-flow-step"><span class="cm-flow-dot" aria-hidden="true"></span><span>Evidências: screenshot + clipe MP4</span></div>
-            <div class="cm-flow-arrow" aria-hidden="true">↓</div>
-            <div class="cm-flow-step"><span class="cm-flow-dot" aria-hidden="true"></span><span>Causa-Raiz probabilística + contexto urbano</span></div>
-            <div class="cm-flow-arrow" aria-hidden="true">↓</div>
-            <div class="cm-flow-step cm-flow-step--end"><span class="cm-flow-dot cm-flow-dot--purple" aria-hidden="true"></span><span>Relatório CSV / JSON Lines + Dashboard</span></div>
-          </div>
+          <table class="cm-table hidden" id="rel-table" aria-label="Tabela de ocorrências de infrações">
+            <thead>
+              <tr>
+                <th scope="col">Timestamp</th>
+                <th scope="col">Tipo</th>
+                <th scope="col">Câmera</th>
+                <th scope="col">Confiança</th>
+                <th scope="col">Causa Principal</th>
+                <th scope="col">Screenshot</th>
+              </tr>
+            </thead>
+            <tbody id="rel-table-body"></tbody>
+          </table>
         </div>
-
-        <!-- Projeto -->
-        <div class="cm-card mt-6">
-          <p class="cm-label mb-2">Projeto</p>
-          <p class="cm-text-muted text-sm">FECART 2026</p>
-          <p class="cm-text-muted text-sm mt-1">Banco de Dados (PostgreSQL)</p>
-        </div>
-
       </div>
-    </div>
-  </section>
+    </section>
 
-</main><!-- /cm-main -->
 
-<!-- Toast container -->
-<div id="cm-toast-container" class="cm-toast-container" aria-live="assertive" aria-atomic="true"></div>
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       SEÇÃO 5: INTERATIVIDADE
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <section id="interatividade" class="cm-section" aria-labelledby="h2-interativ">
+      <div class="cm-page-header">
+        <div>
+          <h2 id="h2-interativ" class="cm-page-title">Estação Interativa</h2>
+          <p class="cm-page-sub">Compare sua percepção com a análise do CogniMove.</p>
+        </div>
+        <!-- Contador de ocorrências vistas -->
+        <div class="cm-counter-badge" id="wiz-counter" aria-live="polite">
+          <span id="wiz-counter-text">0 de 6 vistas</span>
+        </div>
+      </div>
 
-<!-- Scripts -->
-<script src="/static/js/site.js"></script>
+      <!-- Progress bar de 4 passos -->
+      <div class="cm-wizard-progress" role="list" aria-label="Progresso do quiz">
+        <div class="cm-wizard-step cm-wizard-step--active" id="wiz-step-1" role="listitem">
+          <div class="cm-wizard-step__dot">1</div>
+          <span class="cm-wizard-step__label">Início</span>
+        </div>
+        <div class="cm-wizard-step__line" aria-hidden="true"></div>
+        <div class="cm-wizard-step" id="wiz-step-2" role="listitem">
+          <div class="cm-wizard-step__dot">2</div>
+          <span class="cm-wizard-step__label">Vídeo</span>
+        </div>
+        <div class="cm-wizard-step__line" aria-hidden="true"></div>
+        <div class="cm-wizard-step" id="wiz-step-3" role="listitem">
+          <div class="cm-wizard-step__dot">3</div>
+          <span class="cm-wizard-step__label">Quiz</span>
+        </div>
+        <div class="cm-wizard-step__line" aria-hidden="true"></div>
+        <div class="cm-wizard-step" id="wiz-step-4" role="listitem">
+          <div class="cm-wizard-step__dot">4</div>
+          <span class="cm-wizard-step__label">Resultado</span>
+        </div>
+      </div>
+
+      <!-- ─── PAINEL 1: INÍCIO ──────────────────────────────────────────── -->
+      <div id="wiz-panel-1" class="cm-wizard-panel">
+        <div class="cm-wiz-inicio">
+          <div class="cm-wiz-inicio__icon" aria-hidden="true">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+              stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="6" width="20" height="12" rx="4" />
+              <line x1="6" y1="12" x2="10" y2="12" />
+              <line x1="8" y1="10" x2="8" y2="14" />
+              <circle cx="16" cy="10" r="1" fill="currentColor" />
+              <circle cx="18" cy="13" r="1" fill="currentColor" />
+            </svg>
+          </div>
+          <h3 class="cm-wizard-title">Teste sua percepção!</h3>
+          <p class="cm-wizard-desc">
+            O sistema vai sortear automaticamente uma ocorrência de trânsito gravada.
+            Assista ao vídeo e depois responda: qual foi a infração detectada pelo CogniMove?
+          </p>
+          <div class="cm-wiz-inicio__rules">
+            <div class="cm-wiz-rule"><span class="cm-wiz-rule__icon">🎲</span><span>Sorteio automático — sem escolha
+                manual</span></div>
+            <div class="cm-wiz-rule"><span class="cm-wiz-rule__icon">🔄</span><span>Até 6 ocorrências por sessão sem
+                repetição</span></div>
+            <div class="cm-wiz-rule"><span class="cm-wiz-rule__icon">🤖</span><span>Confira a análise do CogniMove ao
+                final</span></div>
+          </div>
+          <div id="wiz-sem-ocorrencias" class="cm-empty-state cm-card" style="display:none">
+            <span class="cm-empty-state__icon" aria-hidden="true">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            </span>
+            <p class="cm-empty-state__title">Banco de ocorrências em preparação</p>
+            <p class="cm-empty-state__sub">Os vídeos GTA curados estarão disponíveis antes da apresentação FECART.</p>
+          </div>
+          <button id="wiz-btn-iniciar" class="cm-btn cm-btn--primary cm-btn--xl"
+            onclick="InteratividadeModule.sortearEIniciar()">
+            🎲&nbsp; Testar minha percepção
+          </button>
+        </div>
+      </div>
+
+      <!-- ─── PAINEL 2: VÍDEO ──────────────────────────────────────────── -->
+      <div id="wiz-panel-2" class="cm-wizard-panel hidden">
+        <h3 class="cm-wizard-title">Ocorrência sorteada</h3>
+        <p class="cm-wizard-desc">Assista ao vídeo com atenção. O tipo de infração só será revelado depois do quiz.</p>
+
+        <div class="cm-wizard-layout">
+          <div class="cm-wizard-video" style="flex:1">
+            <video id="wiz-clip-player" class="cm-video-player" controls preload="metadata"
+              aria-label="Clipe de ocorrência sorteada">
+              Seu navegador não suporta o elemento video.
+            </video>
+            <div class="cm-wiz-clip-meta cm-card mt-3" id="wiz-clip-meta" style="display:none">
+              <span class="cm-label">Câmera:</span>
+              <span id="wiz-clip-camera" class="cm-text-muted">—</span>
+              &nbsp;·&nbsp;
+              <span class="cm-label">Confiança IA:</span>
+              <span id="wiz-clip-conf" class="cm-text-muted">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="cm-wizard-actions">
+          <button class="cm-btn cm-btn--ghost" onclick="InteratividadeModule.reiniciar()">
+            ✕&nbsp; Cancelar
+          </button>
+          <button id="wiz-btn-ir-quiz" class="cm-btn cm-btn--primary cm-btn--lg"
+            onclick="InteratividadeModule.irParaStep(3)">
+            Responder Quiz&nbsp; →
+          </button>
+        </div>
+      </div>
+
+      <!-- ─── PAINEL 3: QUIZ ──────────────────────────────────────────── -->
+      <div id="wiz-panel-3" class="cm-wizard-panel hidden">
+        <h3 class="cm-wizard-title">Qual foi a infração detectada?</h3>
+        <p class="cm-wizard-desc">Com base no vídeo assistido, escolha a infração que você identificou.</p>
+
+        <div class="cm-quiz-opcoes" id="wiz-quiz-opcoes" role="radiogroup" aria-label="Opções de infração">
+          <!-- Preenchido dinamicamente pelo JS -->
+        </div>
+
+        <div class="cm-wizard-actions">
+          <button class="cm-btn cm-btn--ghost" onclick="InteratividadeModule.irParaStep(2)">
+            ← Rever vídeo
+          </button>
+          <button id="wiz-btn-confirmar" class="cm-btn cm-btn--primary cm-btn--lg" disabled
+            onclick="InteratividadeModule.irParaStep(4)">
+            Confirmar Resposta&nbsp; →
+          </button>
+        </div>
+      </div>
+
+      <!-- ─── PAINEL 4: RESULTADO ─────────────────────────────────────── -->
+      <div id="wiz-panel-4" class="cm-wizard-panel hidden">
+        <div class="cm-resultado-header" id="wiz-resultado-header"></div>
+
+        <div class="cm-resultado-layout">
+
+          <!-- Left: Sua resposta -->
+          <div class="cm-resultado-col cm-card">
+            <h4 class="cm-resultado-col__title">Sua Resposta</h4>
+            <div class="cm-resultado-list">
+              <div class="cm-resultado-item">
+                <span class="cm-resultado-item__num">1.</span>
+                <span class="cm-resultado-item__text" id="wiz-user-tipo">—</span>
+              </div>
+              <div class="cm-resultado-item">
+                <span class="cm-resultado-item__num">2.</span>
+                <span class="cm-resultado-item__text" id="wiz-user-acerto">—</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Análise CogniMove -->
+          <div class="cm-resultado-col cm-card">
+            <h4 class="cm-resultado-col__title">Análise do CogniMove</h4>
+            <div class="cm-resultado-list">
+              <div class="cm-resultado-item">
+                <span class="cm-resultado-item__num">1.</span>
+                <span class="cm-resultado-item__text" id="wiz-cm-tipo">—</span>
+              </div>
+              <div class="cm-resultado-item">
+                <span class="cm-resultado-item__num">2.</span>
+                <span class="cm-resultado-item__text">
+                  Causa Raiz Probabilística:
+                  <strong id="wiz-cm-causa">—</strong>
+                  (<span id="wiz-cm-causa-pct">—</span>)
+                </span>
+              </div>
+              <div class="cm-resultado-item">
+                <span class="cm-resultado-item__num">3.</span>
+                <span class="cm-resultado-item__text" id="wiz-cm-fatores">Integração com dados urbanos: nenhum fator
+                  ativo</span>
+              </div>
+            </div>
+
+            <div class="cm-resultado-infracao">
+              <span class="cm-label">Infração Identificada</span>
+              <span class="cm-badge cm-badge--red cm-badge--lg" id="wiz-cm-infracao-badge">—</span>
+              <span class="cm-badge cm-badge--green cm-badge--lg" id="wiz-cm-conf-badge">—</span>
+            </div>
+
+            <div class="mt-4">
+              <p class="cm-label mb-2">Prováveis Causas de Ocorrência</p>
+              <div id="wiz-causas-list" class="cm-causas-bars"></div>
+            </div>
+
+            <div class="cm-donut-wrap mt-4">
+              <canvas id="wiz-donut-chart" width="140" height="140"
+                aria-label="Distribuição de causas prováveis"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="cm-wizard-actions mt-6">
+          <button class="cm-btn cm-btn--ghost" onclick="InteratividadeModule.irParaStep(2)">
+            ← Ver vídeo novamente
+          </button>
+          <button class="cm-btn cm-btn--primary" onclick="InteratividadeModule.reiniciar()">
+            🎲&nbsp; Próxima ocorrência
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+
+
+
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       SEÇÃO 6: SOBRE
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <section id="sobre" class="cm-section" aria-labelledby="h2-sobre">
+      <div class="cm-sobre-layout">
+
+        <!-- Left column: description + team -->
+        <div class="cm-sobre-main">
+
+          <div class="cm-card cm-card--featured mb-6">
+            <div class="cm-sobre-logo" aria-hidden="true">
+              <div class="cm-sobre-logo__icon">
+                <svg width="48" height="48" viewBox="0 0 28 28" fill="none">
+                  <circle cx="14" cy="14" r="13" stroke="currentColor" stroke-width="2" />
+                  <path d="M8 14 L12 10 L16 16 L20 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                  <circle cx="20" cy="12" r="2.5" fill="currentColor" />
+                </svg>
+              </div>
+              <div>
+                <span class="cm-sobre-logo__name">CogniMove</span>
+                <span class="cm-sobre-logo__tagline">Tecnologia a favor de cidades mais seguras.</span>
+              </div>
+            </div>
+            <h2 id="h2-sobre" class="cm-page-title mt-4">Sobre o CogniMove</h2>
+            <p class="cm-sobre-desc">
+              O CogniMove é uma plataforma de monitoramento inteligente de trânsito que utiliza
+              visão computacional (YOLOv8 + ByteTrack) para identificação automática de infrações
+              e análise probabilística de causa‑raiz com base em contexto urbano.
+            </p>
+            <p class="cm-sobre-desc mt-3">
+              O sistema detecta três tipos de infrações — avanço de sinal vermelho, invasão de
+              faixa de pedestres/bike box e bloqueio de cruzamento — gerando evidências visuais
+              (screenshot + clipe de vídeo) e registros auditáveis em CSV e JSON Lines para
+              cada ocorrência.
+            </p>
+          </div>
+
+          <!-- Team -->
+          <div class="cm-card">
+            <p class="cm-label mb-4">Equipe</p>
+            <div class="cm-team-grid">
+              <div class="cm-team-member">
+                <div class="cm-team-member__avatar" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                </div>
+                <div>
+                  <p class="cm-team-member__name">Manuella Moretti Landim</p>
+                  <p class="cm-team-member__role">Equipe do Projeto</p>
+                </div>
+              </div>
+              <div class="cm-team-member">
+                <div class="cm-team-member__avatar" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                </div>
+                <div>
+                  <p class="cm-team-member__name">Melissa Nunes de Oliveira</p>
+                  <p class="cm-team-member__role">Equipe do Projeto</p>
+                </div>
+              </div>
+              <div class="cm-team-member">
+                <div class="cm-team-member__avatar" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                </div>
+                <div>
+                  <p class="cm-team-member__name">Raíssa Ramos</p>
+                  <p class="cm-team-member__role">Equipe do Projeto</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right column: tech + architecture -->
+        <div class="cm-sobre-sidebar">
+
+          <!-- Tech stack -->
+          <div class="cm-card mb-6">
+            <p class="cm-label mb-4">Tecnologias</p>
+            <div class="cm-tech-grid">
+              <div class="cm-tech-item">
+                <span class="cm-tech-icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="22" y1="12" x2="18" y2="12" />
+                    <line x1="6" y1="12" x2="2" y2="12" />
+                    <line x1="12" y1="6" x2="12" y2="2" />
+                    <line x1="12" y1="22" x2="12" y2="18" />
+                  </svg>
+                </span>
+                <span class="cm-tech-name">YOLOv8</span>
+                <span class="cm-tech-role">Detecção de Objetos</span>
+              </div>
+              <div class="cm-tech-item">
+                <span class="cm-tech-icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <circle cx="12" cy="12" r="6" />
+                    <circle cx="12" cy="12" r="2" />
+                  </svg>
+                </span>
+                <span class="cm-tech-name">ByteTrack</span>
+                <span class="cm-tech-role">Rastreamento Multi‑objeto</span>
+              </div>
+              <div class="cm-tech-item">
+                <span class="cm-tech-icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="4 17 10 11 4 5" />
+                    <line x1="12" y1="19" x2="20" y2="19" />
+                  </svg>
+                </span>
+                <span class="cm-tech-name">Python / Flask</span>
+                <span class="cm-tech-role">Backend & API</span>
+              </div>
+              <div class="cm-tech-item">
+                <span class="cm-tech-icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10" />
+                    <line x1="12" y1="20" x2="12" y2="4" />
+                    <line x1="6" y1="20" x2="6" y2="14" />
+                    <line x1="2" y1="20" x2="22" y2="20" />
+                  </svg>
+                </span>
+                <span class="cm-tech-name">Chart.js</span>
+                <span class="cm-tech-role">Visualização de Dados</span>
+              </div>
+              <div class="cm-tech-item">
+                <span class="cm-tech-icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="23 7 16 12 23 17 23 7" />
+                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                  </svg>
+                </span>
+                <span class="cm-tech-name">OpenCV</span>
+                <span class="cm-tech-role">Processamento de Vídeo</span>
+              </div>
+              <div class="cm-tech-item">
+                <span class="cm-tech-icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <ellipse cx="12" cy="5" rx="9" ry="3" />
+                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                  </svg>
+                </span>
+                <span class="cm-tech-name">Banco de Dados Urbanos</span>
+                <span class="cm-tech-role">Contexto & Causa‑Raiz</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- System flow -->
+          <div class="cm-card">
+            <p class="cm-label mb-4">Fluxo do Sistema</p>
+            <div class="cm-flow">
+              <div class="cm-flow-step"><span class="cm-flow-dot" aria-hidden="true"></span><span>Vídeo de entrada
+                  (arquivo ou câmera)</span></div>
+              <div class="cm-flow-arrow" aria-hidden="true">↓</div>
+              <div class="cm-flow-step"><span class="cm-flow-dot" aria-hidden="true"></span><span>YOLOv8 — Detecção de
+                  objetos</span></div>
+              <div class="cm-flow-arrow" aria-hidden="true">↓</div>
+              <div class="cm-flow-step"><span class="cm-flow-dot" aria-hidden="true"></span><span>ByteTrack —
+                  Rastreamento multi-objeto</span></div>
+              <div class="cm-flow-arrow" aria-hidden="true">↓</div>
+              <div class="cm-flow-step"><span class="cm-flow-dot" aria-hidden="true"></span><span>Motor de Regras (Sinal
+                  / Faixa / Bloqueio)</span></div>
+              <div class="cm-flow-arrow" aria-hidden="true">↓</div>
+              <div class="cm-flow-step"><span class="cm-flow-dot" aria-hidden="true"></span><span>Evidências: screenshot
+                  + clipe MP4</span></div>
+              <div class="cm-flow-arrow" aria-hidden="true">↓</div>
+              <div class="cm-flow-step"><span class="cm-flow-dot" aria-hidden="true"></span><span>Causa-Raiz
+                  probabilística + contexto urbano</span></div>
+              <div class="cm-flow-arrow" aria-hidden="true">↓</div>
+              <div class="cm-flow-step cm-flow-step--end"><span class="cm-flow-dot cm-flow-dot--purple"
+                  aria-hidden="true"></span><span>Relatório CSV / JSON Lines + Dashboard</span></div>
+            </div>
+          </div>
+
+          <!-- Projeto -->
+          <div class="cm-card mt-6">
+            <p class="cm-label mb-2">Projeto</p>
+            <p class="cm-text-muted text-sm">FECART 2026</p>
+            <p class="cm-text-muted text-sm mt-1">Banco de Dados (PostgreSQL)</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main><!-- /cm-main -->
+
+  <!-- Toast container -->
+  <div id="cm-toast-container" class="cm-toast-container" aria-live="assertive" aria-atomic="true"></div>
+
+  <!-- Scripts -->
+  <script src="/static/js/site.js"></script>
 
 </body>
 </html>

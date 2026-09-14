@@ -1,4 +1,4 @@
-﻿/**
+/**
  * CogniMove — site.js
  * Módulos IIFE para o site de demonstração FECART 2026.
  *
@@ -222,6 +222,7 @@ const MonitorModule = (() => {
     const preset = opt?.dataset.preset || 'general';
     const camera = `Câmera — ${opt?.text || video}`;
 
+    clearLog();
     try {
       const r = await fetch('/api/start', {
         method: 'POST',
@@ -287,13 +288,67 @@ const MonitorModule = (() => {
     if (_sse) { _sse.close(); _sse = null; }
   }
 
+  function _formatTimeOnly(ts) {
+    try {
+      const d = new Date(ts);
+      return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('pt-BR');
+    } catch {
+      return '';
+    }
+  }
+
   function _appendLogItem(inf) {
     const list  = document.getElementById('mon-log-list');
     const empty = document.getElementById('mon-log-empty');
     if (empty) empty.style.display = 'none';
 
+    const tipoCls = Utils.tipoClass(inf.tipo);
+    const eventTime = inf.timestamp ? new Date(inf.timestamp).getTime() : Date.now();
+    const firstItem = list?.querySelector('.cm-log-item');
+
+    // Agrupamento visual: mesmo tipo e intervalo menor que 8s
+    if (firstItem && tipoCls && firstItem.classList.contains(tipoCls)) {
+      const lastTime = Number(firstItem.dataset.timeLast || 0);
+      const diffSec = Math.abs(eventTime - lastTime) / 1000;
+
+      if (lastTime > 0 && diffSec < 8) {
+        const count = parseInt(firstItem.dataset.count || '1', 10) + 1;
+        firstItem.dataset.count = String(count);
+        firstItem.dataset.timeLast = String(eventTime);
+
+        const firstTimeStr = firstItem.dataset.timeFirstStr || _formatTimeOnly(Number(firstItem.dataset.timeFirst));
+        const lastTimeStr = _formatTimeOnly(eventTime);
+        const timeRange = `${firstTimeStr} - ${lastTimeStr} (${count}x)`;
+
+        // Atualiza ou insere o contador na tag de tipo
+        const tipoEl = firstItem.querySelector('.cm-log-item__tipo');
+        if (tipoEl) {
+          let countBadge = tipoEl.querySelector('.cm-log-item__count');
+          if (!countBadge) {
+            countBadge = document.createElement('span');
+            countBadge.className = 'cm-log-item__count';
+            tipoEl.appendChild(countBadge);
+          }
+          countBadge.textContent = `×${count}`;
+        }
+
+        // Atualiza timestamp para o intervalo "HH:MM:SS - HH:MM:SS (Nx)"
+        const metaEl = firstItem.querySelector('.cm-log-item__meta');
+        if (metaEl) {
+          metaEl.textContent = `${timeRange} · ID ${inf.track_id ?? '—'} · ${Utils.formatConf(inf.confianca)}`;
+        }
+        return;
+      }
+    }
+
+    const timeStr = _formatTimeOnly(eventTime);
     const item = document.createElement('div');
-    item.className = `cm-log-item ${Utils.tipoClass(inf.tipo)}`;
+    item.className = `cm-log-item ${tipoCls}`;
+    item.dataset.timeFirst = String(eventTime);
+    item.dataset.timeLast = String(eventTime);
+    item.dataset.timeFirstStr = timeStr;
+    item.dataset.count = '1';
+
     item.innerHTML = `
       <div class="cm-log-item__tipo">${Utils.tipoLabel(inf.tipo)}</div>
       <div class="cm-log-item__meta">${Utils.formatTimestamp(inf.timestamp)} · ID ${inf.track_id ?? '—'} · ${Utils.formatConf(inf.confianca)}</div>
@@ -615,8 +670,7 @@ const RelatorioModule = (() => {
       type: 'doughnut',
       data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0, hoverOffset: 6 }] },
       options: {
-        responsive: true,
-        maintainAspectRatio: true,
+        responsive: false,
         plugins: {
           legend: { display: false },
           tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}` } },

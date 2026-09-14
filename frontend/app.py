@@ -125,8 +125,25 @@ def api_videos():
 @app.route("/api/start", methods=["POST"])
 def api_start():
     global detector, detector_thread
+    # Safety: ensure any previous detector thread is stopped before starting a new one
+    if detector_thread and detector_thread.is_alive():
+        if detector:
+            detector.stop()
+        detector_thread.join(timeout=3.0)
     if detector_thread and detector_thread.is_alive():
         return jsonify({"status": "already_running"}), 400
+
+    # Clear any residual frames/infractions from previous run
+    while not frame_queue.empty():
+        try:
+            frame_queue.get_nowait()
+        except queue.Empty:
+            break
+    while not infracoes_queue.empty():
+        try:
+            infracoes_queue.get_nowait()
+        except queue.Empty:
+            break
 
     data         = request.get_json() or {}
     source       = data.get("source", 0)
@@ -141,6 +158,7 @@ def api_start():
         output_dir      = str(_BACKEND / "outputs"),
         camera_name     = camera_name,
         show_window     = False,
+        desenhar_hud_completo = False,
         frame_queue     = frame_queue,
         infracoes_queue = infracoes_queue,
     )
@@ -153,6 +171,8 @@ def api_start():
 def api_stop():
     if detector:
         detector.stop()
+    if detector_thread and detector_thread.is_alive():
+        detector_thread.join(timeout=3.0)
     return jsonify({"status": "stopped"})
 
 

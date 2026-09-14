@@ -30,3 +30,29 @@ data/hora escolhida pelo usuário.
 - Não faça `git commit` nem `git push` sem eu pedir explicitamente.
 - Não refatore, reformate nem "melhore" código fora do escopo pedido.
 - Não crie arquivos novos que eu não pedi.
+
+## Regras do Frontend (Pessoa 3 — Raíssa)
+
+Stack real: Flask (frontend/app.py) servindo um único frontend/templates/index.html
+(SPA por hash, seções .cm-section trocadas via NavModule) + frontend/static/css/style.css
+(design system via CSS custom properties em :root) + frontend/static/js/site.js (módulos
+IIFE: ThemeModule, NavModule, MonitorModule, AnaliseModule, RelatorioModule,
+InteratividadeModule). NÃO É REACT. Não crie arquivos .jsx, não introduza um bundler,
+não proponha migração de framework — não há tempo antes da feira.
+
+Identidade visual: tema escuro por padrão com toggle para claro (data-theme="dark"|"light"
+na tag <html>), paleta base em roxo/violeta. Mudanças de cor/token vão em :root e
+[data-theme="light"] no topo do style.css — tudo no resto do arquivo usa var(--x), então
+mudar o token no topo já propaga.
+
+Dado real vs mock: as páginas Análise, Relatórios e Interatividade dependem de arquivos
+.json em backend/outputs/curados/real/ e backend/outputs/curados/gta/, servidos por
+/api/curados e /api/curados/gta (rotas já existem em app.py). Essas pastas podem não
+existir ainda — se não existirem, é ESPERADO que a tela mostre o estado vazio, isso não
+é bug do frontend. Nunca invente um schema de JSON novo sem eu confirmar — o formato
+atual está documentado no PLANO_PESSOA_3_FRONTEND.md, seção 3.
+
+Não rode `python frontend/app.py` deixando o processo aberto sem eu pedir (ele não
+termina sozinho). Não faça git commit/push sem eu pedir explicitamente. Não reformate
+nem "limpe" código fora do escopo pedido.
+

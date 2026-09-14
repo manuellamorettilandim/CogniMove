@@ -17,38 +17,32 @@ VIDEOS = [
     {
         "id": "video_teste1",
         "grupo": "real",
-        "path": str(_ROOT / "videos_originais" / "video_teste.mp4"),
+        "path": str(_ROOT / "videos_originais" / "video_teste_recorte.mp4"),
         "preset": "cruzamento_centro",
         "camera": "cruzamento_centro_cam1",
     },
     {
         "id": "video_teste2",
         "grupo": "real",
-        "path": str(_ROOT / "videos_originais" / "video_teste2.mp4"),
+        "path": str(_ROOT / "videos_originais" / "video_teste2_recorte.mp4"),
         "preset": "avenida_norte",
         "camera": "avenida_norte_cam2",
     },
     {
         "id": "video_teste3",
         "grupo": "real",
-        "path": str(_ROOT / "videos_originais" / "video_teste3.mp4"),
+        "path": str(_ROOT / "videos_originais" / "video_teste3_recorte.mp4"),
         "preset": "invasao_faixa",
         "camera": "invasao_faixa_cam3",
     },
     {
         "id": "video_teste4",
         "grupo": "gta",
-        "path": str(_ROOT / "videos_originais" / "video_teste4.mkv"),
-        "preset": "gta1",
+        "path": str(_ROOT / "videos_originais" / "video_teste5_recorte.mp4"),
+        "preset": "gta2",
         "camera": "gta_cam1",
     },
-    {
-        "id": "video_teste5",
-        "grupo": "gta",
-        "path": str(_ROOT / "videos_originais" / "video_teste5.mkv"),
-        "preset": "gta2",
-        "camera": "gta_cam2",
-    },
+
 ]
 
 def main():

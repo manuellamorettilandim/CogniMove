@@ -5,6 +5,7 @@ Detecta cruzamento de linhas de limite e invasão de polígonos protegidos.
 from __future__ import annotations
 import cv2
 import datetime
+import math
 import numpy as np
 
 
@@ -35,21 +36,43 @@ def point_in_polygon(pt, polygon_pts) -> bool:
 class RegraFaixaPedestre:
     """Detecta invasão de faixa de pedestres e/ou bike box."""
 
-    def __init__(self, lines: list, polygons: list = None, cooldown_frames: int = 150):
+    def __init__(
+        self,
+        lines: list,
+        polygons: list = None,
+        cooldown_frames: int = 150,
+        raio_posicao_px: float = 40.0,
+    ):
         """
         Args:
             lines:           Lista de dicts {name, pt1, pt2, color}
             polygons:        Lista de dicts {name, points}
             cooldown_frames: Frames de espera antes de re-alertar o mesmo veículo (padrão: 150 = 5s)
+            raio_posicao_px: Raio em pixels para cooldown espacial por zona (padrão: 40px)
         """
-        self.lines    = lines or []
-        self.polygons = polygons or []
+        self.lines           = lines or []
+        self.polygons        = polygons or []
         self.cooldown_frames = cooldown_frames
+        self.raio_posicao_px = raio_posicao_px
         self._cooldown: dict[int, int] = {}
+        self._cooldown_zona: dict[str, tuple[int, tuple[int, int]]] = {}
         # Por track_id, conjunto de nomes de polígonos em que o veículo já
         # estava no frame anterior — permite tratar a invasão como evento de
         # entrada (fora → dentro), em vez de estado ("está dentro?").
         self._dentro_de: dict[int, set[str]] = {}
+
+    def _em_cooldown_zona(self, nome_zona: str, bottom_pt: tuple[int, int], frame_idx: int) -> bool:
+        """
+        Verifica se a zona está em cooldown para uma posição próxima (< raio_posicao_px).
+        Evita re-alertas do mesmo veículo físico cujo ID foi perdido pelo rastreador.
+        """
+        if nome_zona in self._cooldown_zona:
+            ultimo_frame, ultimo_pt = self._cooldown_zona[nome_zona]
+            if frame_idx - ultimo_frame < self.cooldown_frames:
+                dist = math.hypot(bottom_pt[0] - ultimo_pt[0], bottom_pt[1] - ultimo_pt[1])
+                if dist < self.raio_posicao_px:
+                    return True
+        return False
 
     def checar(self, frame, tracks: list, light_state: str, frame_idx: int) -> list[dict]:
         """Verifica infrações de invasão de faixa nos tracks ativos."""
@@ -74,13 +97,20 @@ class RegraFaixaPedestre:
 
             if not em_cooldown and polys_entrando:
                 nome_poly = next(iter(polys_entrando))
-                self._cooldown[track.id] = frame_idx
-                infractions.append(self._montar_infracao(track, frame_idx, f"Invasão de {nome_poly}"))
+                if not self._em_cooldown_zona(nome_poly, bottom_pt, frame_idx):
+                    self._cooldown[track.id] = frame_idx
+                    infractions.append(
+                        self._montar_infracao(track, frame_idx, f"Invasão de {nome_poly}", nome_zona=nome_poly)
+                    )
             elif not em_cooldown:
                 desc_linha = self._check_line_crossing(track)
                 if desc_linha:
-                    self._cooldown[track.id] = frame_idx
-                    infractions.append(self._montar_infracao(track, frame_idx, desc_linha))
+                    nome_linha = desc_linha.replace("Cruzou ", "")
+                    if not self._em_cooldown_zona(nome_linha, bottom_pt, frame_idx):
+                        self._cooldown[track.id] = frame_idx
+                        infractions.append(
+                            self._montar_infracao(track, frame_idx, desc_linha, nome_zona=nome_linha)
+                        )
 
         # Descarta o estado de tracks que não estão mais ativos, para os
         # dicionários não crescerem sem limite em execuções longas.
@@ -89,7 +119,15 @@ class RegraFaixaPedestre:
 
         return infractions
 
-    def _montar_infracao(self, track, frame_idx: int, desc: str) -> dict:
+    def _montar_infracao(self, track, frame_idx: int, desc: str, nome_zona: str | None = None) -> dict:
+        bottom_pt = track.current["bottom_pt"]
+        if nome_zona:
+            self._cooldown_zona[nome_zona] = (frame_idx, bottom_pt)
+        elif desc.startswith("Invasão de "):
+            self._cooldown_zona[desc[len("Invasão de "):]] = (frame_idx, bottom_pt)
+        elif desc.startswith("Cruzou "):
+            self._cooldown_zona[desc[len("Cruzou "):]] = (frame_idx, bottom_pt)
+
         return {
             "tipo":      "INVASAO_FAIXA",
             "descricao": desc,
