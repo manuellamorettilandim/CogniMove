@@ -244,7 +244,11 @@ const MonitorModule = (() => {
     // Show video feed
     const feed = document.getElementById('mon-video-feed');
     const ph = document.getElementById('mon-video-placeholder');
-    if (feed) { feed.src = '/video_feed'; feed.classList.remove('hidden'); }
+    if (feed) {
+      feed.src = '';
+      feed.src = '/video_feed?t=' + Date.now();
+      feed.classList.remove('hidden');
+    }
     if (ph) ph.classList.add('hidden');
 
     document.getElementById('mon-btn-start').disabled = true;
@@ -279,6 +283,10 @@ const MonitorModule = (() => {
       try {
         const data = JSON.parse(e.data);
         if (data.ping) return;
+        if (data.tipo_evento === 'classes_detectadas') {
+          _updateClassCounts(data.contagem);
+          return;
+        }
         _appendLogItem(data);
         _updateStats(data.tipo);
       } catch { }
@@ -360,6 +368,19 @@ const MonitorModule = (() => {
     // Keep max 60 items
     const items = list?.querySelectorAll('.cm-log-item');
     if (items && items.length > 60) items[items.length - 1].remove();
+  }
+
+  function _updateClassCounts(contagem) {
+    if (!contagem) return;
+    const carros = document.getElementById('mon-class-carros');
+    const motos = document.getElementById('mon-class-motos');
+    const pessoas = document.getElementById('mon-class-pessoas');
+    const semaforos = document.getElementById('mon-class-semaforos');
+
+    if (carros && contagem.Carro !== undefined) carros.textContent = contagem.Carro;
+    if (motos && contagem.Moto !== undefined) motos.textContent = contagem.Moto;
+    if (pessoas && contagem.Pessoa !== undefined) pessoas.textContent = contagem.Pessoa;
+    if (semaforos && contagem.Semaforo !== undefined) semaforos.textContent = contagem.Semaforo;
   }
 
   function _updateStats(tipo) {
