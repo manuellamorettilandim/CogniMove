@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CogniMove — site.js
  * Módulos IIFE para o site de demonstração FECART 2026.
  *
@@ -22,22 +22,22 @@ const Utils = (() => {
   /** Mapeia código interno → label de exibição (regra hard-coded, nunca inventar). */
   const TIPO_LABELS = {
     AVANCO_SINAL_VERMELHO: 'Avanço de sinal vermelho',
-    INVASAO_FAIXA:         'Invasão de faixa de pedestres/bike box',
-    BLOQUEIO_CRUZAMENTO:   'Bloqueio de cruzamento',
+    INVASAO_FAIXA: 'Invasão de faixa de pedestres/bike box',
+    BLOQUEIO_CRUZAMENTO: 'Bloqueio de cruzamento',
   };
 
   /** Classe CSS do log-item conforme tipo. */
   const TIPO_CLASS = {
     AVANCO_SINAL_VERMELHO: 'cm-log-item--sinal',
-    INVASAO_FAIXA:         'cm-log-item--faixa',
-    BLOQUEIO_CRUZAMENTO:   'cm-log-item--bloq',
+    INVASAO_FAIXA: 'cm-log-item--faixa',
+    BLOQUEIO_CRUZAMENTO: 'cm-log-item--bloq',
   };
 
   /** Classe da badge conforme tipo. */
   const TIPO_BADGE = {
     AVANCO_SINAL_VERMELHO: 'cm-badge--red',
-    INVASAO_FAIXA:         'cm-badge--amber',
-    BLOQUEIO_CRUZAMENTO:   'cm-badge--blue',
+    INVASAO_FAIXA: 'cm-badge--amber',
+    BLOQUEIO_CRUZAMENTO: 'cm-badge--blue',
   };
 
   function tipoLabel(codigo) {
@@ -86,14 +86,16 @@ const Utils = (() => {
   function clipUrl(path) {
     if (!path) return null;
     // path pode ser absoluto do sistema ou só o nome do arquivo
-    const name = path.split(/[\\/]/).pop();
+    const partes = path.split(/[\\/]/);
+    const name = partes.length >= 2 ? partes.slice(-2).join('/') : partes.pop();
     return `/clips/${name}`;
   }
 
   /** Retorna URL de screenshot */
   function screenshotUrl(path) {
     if (!path) return null;
-    const name = path.split(/[\\/]/).pop();
+    const partes = path.split(/[\\/]/);
+    const name = partes.length >= 2 ? partes.slice(-2).join('/') : partes.pop();
     return `/clips/${name}`;
   }
 
@@ -157,8 +159,8 @@ const NavModule = (() => {
     });
 
     // Lazy init sections
-    if (id === 'analise')       AnaliseModule.onEnter();
-    if (id === 'relatorios')    RelatorioModule.onEnter();
+    if (id === 'analise') AnaliseModule.onEnter();
+    if (id === 'relatorios') RelatorioModule.onEnter();
     if (id === 'interatividade') InteratividadeModule.onEnter();
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -214,8 +216,8 @@ const MonitorModule = (() => {
   }
 
   async function start() {
-    const sel   = document.getElementById('mon-video-select');
-    const opt   = sel?.options[sel.selectedIndex];
+    const sel = document.getElementById('mon-video-select');
+    const opt = sel?.options[sel.selectedIndex];
     const video = sel?.value;
     if (!video) return;
 
@@ -241,12 +243,12 @@ const MonitorModule = (() => {
 
     // Show video feed
     const feed = document.getElementById('mon-video-feed');
-    const ph   = document.getElementById('mon-video-placeholder');
+    const ph = document.getElementById('mon-video-placeholder');
     if (feed) { feed.src = '/video_feed'; feed.classList.remove('hidden'); }
-    if (ph)   ph.classList.add('hidden');
+    if (ph) ph.classList.add('hidden');
 
     document.getElementById('mon-btn-start').disabled = true;
-    document.getElementById('mon-btn-stop').disabled  = false;
+    document.getElementById('mon-btn-stop').disabled = false;
     document.getElementById('mon-cam-info').style.display = '';
     document.getElementById('mon-cam-label').textContent = camera;
     document.getElementById('mon-live-badge').style.display = '';
@@ -256,16 +258,16 @@ const MonitorModule = (() => {
   }
 
   function stop() {
-    fetch('/api/stop', { method: 'POST' }).catch(() => {});
+    fetch('/api/stop', { method: 'POST' }).catch(() => { });
     _closeSSE();
 
     const feed = document.getElementById('mon-video-feed');
-    const ph   = document.getElementById('mon-video-placeholder');
+    const ph = document.getElementById('mon-video-placeholder');
     if (feed) { feed.src = ''; feed.classList.add('hidden'); }
-    if (ph)   ph.classList.remove('hidden');
+    if (ph) ph.classList.remove('hidden');
 
     document.getElementById('mon-btn-start').disabled = false;
-    document.getElementById('mon-btn-stop').disabled  = true;
+    document.getElementById('mon-btn-stop').disabled = true;
     document.getElementById('mon-live-badge').style.display = 'none';
     updateStatus('idle', 'Parado');
   }
@@ -279,7 +281,7 @@ const MonitorModule = (() => {
         if (data.ping) return;
         _appendLogItem(data);
         _updateStats(data.tipo);
-      } catch {}
+      } catch { }
     };
     _sse.onerror = () => updateStatus('error', 'Erro SSE');
   }
@@ -298,7 +300,7 @@ const MonitorModule = (() => {
   }
 
   function _appendLogItem(inf) {
-    const list  = document.getElementById('mon-log-list');
+    const list = document.getElementById('mon-log-list');
     const empty = document.getElementById('mon-log-empty');
     if (empty) empty.style.display = 'none';
 
@@ -368,7 +370,7 @@ const MonitorModule = (() => {
     document.getElementById('mon-stat-total').textContent = _stats.total;
     document.getElementById('mon-stat-sinal').textContent = _stats.AVANCO_SINAL_VERMELHO;
     document.getElementById('mon-stat-faixa').textContent = _stats.INVASAO_FAIXA;
-    document.getElementById('mon-stat-bloq').textContent  = _stats.BLOQUEIO_CRUZAMENTO;
+    document.getElementById('mon-stat-bloq').textContent = _stats.BLOQUEIO_CRUZAMENTO;
   }
 
   function clearLog() {
@@ -378,7 +380,7 @@ const MonitorModule = (() => {
     const empty = document.getElementById('mon-log-empty');
     if (empty) empty.style.display = '';
     _stats = { total: 0, AVANCO_SINAL_VERMELHO: 0, INVASAO_FAIXA: 0, BLOQUEIO_CRUZAMENTO: 0 };
-    ['mon-stat-total','mon-stat-sinal','mon-stat-faixa','mon-stat-bloq']
+    ['mon-stat-total', 'mon-stat-sinal', 'mon-stat-faixa', 'mon-stat-bloq']
       .forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '0'; });
   }
 
@@ -391,10 +393,10 @@ const MonitorModule = (() => {
 ══════════════════════════════════════════════════════════════════════════ */
 const AnaliseModule = (() => {
   let _curados = [];
-  let _chart   = null;
-  let _loaded  = false;
+  let _chart = null;
+  let _loaded = false;
 
-  const CHART_COLORS = ['#8B5CF6','#3B82F6','#10B981','#F59E0B','#EF4444','#EC4899'];
+  const CHART_COLORS = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899'];
 
   async function onEnter() {
     if (_loaded) return;
@@ -403,15 +405,25 @@ const AnaliseModule = (() => {
   }
 
   async function _loadCurados() {
+    let real = [];
+    let gta = [];
     try {
-      _curados = await Utils.fetchJSON('/api/curados');
+      real = await Utils.fetchJSON('/api/curados');
     } catch {
-      _curados = [];
+      real = [];
     }
+    try {
+      gta = await Utils.fetchJSON('/api/curados/gta');
+    } catch {
+      gta = [];
+    }
+    real.forEach(r => r._origem = 'real');
+    gta.forEach(r => r._origem = 'gta');
+    _curados = [...real, ...gta];
 
-    const sel     = document.getElementById('anal-occ-select');
-    const count   = document.getElementById('anal-occ-count');
-    const ph      = document.getElementById('anal-placeholder');
+    const sel = document.getElementById('anal-occ-select');
+    const count = document.getElementById('anal-occ-count');
+    const ph = document.getElementById('anal-placeholder');
     const content = document.getElementById('anal-content');
 
     if (_curados.length === 0) {
@@ -469,6 +481,17 @@ const AnaliseModule = (() => {
       badge.className = `cm-badge ${Utils.tipoBadgeClass(occ.tipo)}`;
     }
 
+    // Selo de simulação, quando aplicável
+    const simBadge = document.getElementById('anal-sim-badge');
+    if (simBadge) {
+      if (occ._origem === 'gta') {
+        simBadge.textContent = '🎮 Simulação (GTA)';
+        simBadge.classList.remove('hidden');
+      } else {
+        simBadge.classList.add('hidden');
+      }
+    }
+
     // Clip
     const clipWrap = document.getElementById('anal-clip-wrap');
     const clipPlayer = document.getElementById('anal-clip-player');
@@ -494,14 +517,14 @@ const AnaliseModule = (() => {
         causaData.distribuicao = typeof occ.distribuicao_causas === 'string'
           ? JSON.parse(occ.distribuicao_causas)
           : occ.distribuicao_causas;
-      } catch {}
+      } catch { }
     }
 
     // Also fetch live (may differ due to context changes)
     try {
       const live = await Utils.fetchJSON(`/api/causa_raiz?tipo=${encodeURIComponent(occ.tipo)}`);
       causaData = live;
-    } catch {}
+    } catch { }
 
     _renderCausaRaiz(causaData);
   }
@@ -584,13 +607,13 @@ const AnaliseModule = (() => {
 ══════════════════════════════════════════════════════════════════════════ */
 const RelatorioModule = (() => {
   let _donutChart = null;
-  let _barChart   = null;
-  let _loaded     = false;
+  let _barChart = null;
+  let _loaded = false;
 
   const TIPO_COLORS = {
     AVANCO_SINAL_VERMELHO: '#EF4444',
-    INVASAO_FAIXA:         '#F59E0B',
-    BLOQUEIO_CRUZAMENTO:   '#3B82F6',
+    INVASAO_FAIXA: '#F59E0B',
+    BLOQUEIO_CRUZAMENTO: '#3B82F6',
   };
 
   async function onEnter() {
@@ -611,7 +634,7 @@ const RelatorioModule = (() => {
     if (records.length === 0) {
       try {
         records = await Utils.fetchJSON('/api/curados');
-      } catch {}
+      } catch { }
     }
 
     const count = document.getElementById('rel-count-badge');
@@ -750,10 +773,10 @@ const RelatorioModule = (() => {
   }
 
   function _renderTable(records) {
-    const empty  = document.getElementById('rel-empty-state');
-    const table  = document.getElementById('rel-table');
-    const tbody  = document.getElementById('rel-table-body');
-    const range  = document.getElementById('rel-occ-range');
+    const empty = document.getElementById('rel-empty-state');
+    const table = document.getElementById('rel-table');
+    const tbody = document.getElementById('rel-table-body');
+    const range = document.getElementById('rel-occ-range');
 
     if (!tbody) return;
 
@@ -786,8 +809,8 @@ const RelatorioModule = (() => {
       const resp = await fetch('/api/relatorio/csv');
       if (resp.ok) {
         const blob = await resp.blob();
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
         a.href = url; a.download = 'relatorio_cognimove.csv'; a.click();
         URL.revokeObjectURL(url);
         Utils.showToast('CSV baixado com sucesso.', 'success');
@@ -803,7 +826,7 @@ const RelatorioModule = (() => {
   function refresh() {
     _loaded = false;
     if (_donutChart) { _donutChart.destroy(); _donutChart = null; }
-    if (_barChart)   { _barChart.destroy();   _barChart   = null; }
+    if (_barChart) { _barChart.destroy(); _barChart = null; }
   }
 
   return { onEnter, exportCSV, refresh };
@@ -824,17 +847,17 @@ const InteratividadeModule = (() => {
     'INVASAO_FAIXA',
     'BLOQUEIO_CRUZAMENTO',
   ];
-  const CHART_COLORS = ['#8B5CF6','#3B82F6','#10B981','#F59E0B','#EF4444'];
+  const CHART_COLORS = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
 
-  let _curadosGTA   = [];   // todas as ocorrências carregadas
-  let _pool         = [];   // fila embaralhada da sessão
-  let _vistas       = 0;    // quantas foram vistas nesta sessão
-  let _atual        = null; // ocorrência corrente
+  let _curadosGTA = [];   // todas as ocorrências carregadas
+  let _pool = [];   // fila embaralhada da sessão
+  let _vistas = 0;    // quantas foram vistas nesta sessão
+  let _atual = null; // ocorrência corrente
   let _respostaUser = null; // tipo escolhido pelo usuário no quiz
-  let _causaResult  = null;
-  let _wizChart     = null;
-  let _loaded       = false;
-  let _step         = 1;    // 1=início, 2=vídeo, 3=quiz, 4=resultado
+  let _causaResult = null;
+  let _wizChart = null;
+  let _loaded = false;
+  let _step = 1;    // 1=início, 2=vídeo, 3=quiz, 4=resultado
 
   // ── Utils ────────────────────────────────────────────────────────────────
 
@@ -902,7 +925,7 @@ const InteratividadeModule = (() => {
     }
     _atual = _pool.shift();  // retira do início da fila embaralhada
     _respostaUser = null;
-    _causaResult  = null;
+    _causaResult = null;
 
     // Carrega vídeo no player
     const player = document.getElementById('wiz-clip-player');
@@ -914,11 +937,11 @@ const InteratividadeModule = (() => {
 
     // Metadados da câmera
     const metaEl = document.getElementById('wiz-clip-meta');
-    const camEl  = document.getElementById('wiz-clip-camera');
+    const camEl = document.getElementById('wiz-clip-camera');
     const confEl = document.getElementById('wiz-clip-conf');
     if (metaEl && _atual.camera) {
       metaEl.style.display = '';
-      if (camEl)  camEl.textContent  = _atual.camera || '—';
+      if (camEl) camEl.textContent = _atual.camera || '—';
       if (confEl) confEl.textContent = Utils.formatConf(_atual.confianca);
     }
 
@@ -940,7 +963,7 @@ const InteratividadeModule = (() => {
       if (stepEl) {
         stepEl.classList.remove('cm-wizard-step--active', 'cm-wizard-step--done');
         if (i === n) stepEl.classList.add('cm-wizard-step--active');
-        if (i < n)  stepEl.classList.add('cm-wizard-step--done');
+        if (i < n) stepEl.classList.add('cm-wizard-step--done');
       }
     }
 
@@ -1054,10 +1077,11 @@ const InteratividadeModule = (() => {
         fatores_ativos: _atual.cenarios_ativos ? _atual.cenarios_ativos.split(', ').filter(Boolean) : [],
       };
       if (_atual.distribuicao_causas) {
-        try { _causaResult.distribuicao = typeof _atual.distribuicao_causas === 'string'
-          ? JSON.parse(_atual.distribuicao_causas)
-          : _atual.distribuicao_causas;
-        } catch {}
+        try {
+          _causaResult.distribuicao = typeof _atual.distribuicao_causas === 'string'
+            ? JSON.parse(_atual.distribuicao_causas)
+            : _atual.distribuicao_causas;
+        } catch { }
       }
     }
 
@@ -1081,9 +1105,9 @@ const InteratividadeModule = (() => {
         <div class="cm-causa-bar-item">
           <span class="cm-causa-bar-item__name">${causa}</span>
           <div class="cm-causa-bar-item__bar">
-            <div class="cm-causa-bar-item__fill" style="width:${(prob*100).toFixed(0)}%"></div>
+            <div class="cm-causa-bar-item__fill" style="width:${(prob * 100).toFixed(0)}%"></div>
           </div>
-          <span class="cm-causa-bar-item__pct">${(prob*100).toFixed(0)}%</span>
+          <span class="cm-causa-bar-item__pct">${(prob * 100).toFixed(0)}%</span>
         </div>
       `).join('');
     }
@@ -1113,9 +1137,9 @@ const InteratividadeModule = (() => {
   // ── Reiniciar ────────────────────────────────────────────────────────────
 
   function reiniciar() {
-    _atual         = null;
-    _respostaUser  = null;
-    _causaResult   = null;
+    _atual = null;
+    _respostaUser = null;
+    _causaResult = null;
 
     // Replenish pool if empty
     if (_pool.length === 0) {
