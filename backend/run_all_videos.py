@@ -29,13 +29,6 @@ VIDEOS = [
         "camera": "avenida_norte_cam2",
     },
     {
-        "id": "video_teste3",
-        "grupo": "real",
-        "path": str(_ROOT / "videos_originais" / "video_teste3_recorte.mp4"),
-        "preset": "invasao_faixa",
-        "camera": "invasao_faixa_cam3",
-    },
-    {
         "id": "video_teste4",
         "grupo": "gta",
         "path": str(_ROOT / "videos_originais" / "video_teste5_recorte.mp4"),

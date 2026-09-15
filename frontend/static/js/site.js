@@ -1,4 +1,4 @@
-﻿/**
+/**
  * CogniMove — site.js
  * Módulos IIFE para o site de demonstração FECART 2026.
  *
@@ -441,6 +441,7 @@ const AnaliseModule = (() => {
     real.forEach(r => r._origem = 'real');
     gta.forEach(r => r._origem = 'gta');
     _curados = [...real, ...gta];
+    _curados = _curados.filter(o => (parseFloat(o.confianca) || 0) >= 0.60);
 
     const sel = document.getElementById('anal-occ-select');
     const count = document.getElementById('anal-occ-count');
@@ -681,12 +682,6 @@ const RelatorioModule = (() => {
     const total = records.length;
     document.getElementById('rel-kpi-total').textContent = total;
 
-    const confs = records.map(r => parseFloat(r.confianca)).filter(v => !isNaN(v) && v > 0);
-    if (confs.length > 0) {
-      const avg = confs.reduce((a, b) => a + b, 0) / confs.length;
-      const avgPct = avg <= 1 ? avg * 100 : avg;
-      document.getElementById('rel-kpi-conf').textContent = avgPct.toFixed(1) + '%';
-    }
 
     // Top type
     const freq = {};

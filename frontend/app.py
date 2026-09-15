@@ -326,22 +326,8 @@ def api_relatorio_historico():
         else None
     )
 
-    passados: list[dict] = []
-    if outputs_dir.exists():
-        for jf in sorted(outputs_dir.glob("**/*.jsonl")):
-            if sessao_jsonl and jf.resolve() == sessao_jsonl:
-                continue  # Sessão atual virá da memória
-            try:
-                with open(jf, encoding="utf-8") as fh:
-                    for linha in fh:
-                        linha = linha.strip()
-                        if linha:
-                            try:
-                                passados.append(json.loads(linha))
-                            except json.JSONDecodeError:
-                                pass
-            except Exception:
-                pass
+    passados: list[dict] = _listar_curados(_CURADOS_REAL) + _listar_curados(_CURADOS_GTA)
+    passados = [p for p in passados if float(p.get("confianca", 0) or 0) >= 0.60]
 
     correntes: list[dict] = (
         detector.relatorio.get_records() if detector and detector.relatorio else []

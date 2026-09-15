@@ -1103,7 +1103,7 @@ ul { list-style: none; }
 /* ── 12. Relatórios Section ──────────────────────────────────────────────── */
 #relatorios { padding: 2rem 1.5rem; max-width: 1400px; margin: 0 auto; }
 
-.cm-kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+.cm-kpi-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
 .cm-kpi-card {
   display: flex; align-items: center; gap: 1rem;
   transition: transform var(--transition), box-shadow var(--transition);
