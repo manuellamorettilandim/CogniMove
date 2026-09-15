@@ -28,6 +28,7 @@ frame_queue:     queue.Queue = queue.Queue(maxsize=2)
 infracoes_queue: queue.Queue = queue.Queue(maxsize=500)
 detector = None
 detector_thread: threading.Thread | None = None
+_detector_lock = threading.Lock()
 
 
 # ── Rotas principais ──────────────────────────────────────────────────────────
@@ -124,56 +125,58 @@ def api_videos():
 
 @app.route("/api/start", methods=["POST"])
 def api_start():
-    global detector, detector_thread
-    # Safety: ensure any previous detector thread is stopped before starting a new one
-    if detector_thread and detector_thread.is_alive():
-        if detector:
-            detector.stop()
-        detector_thread.join(timeout=3.0)
-    if detector_thread and detector_thread.is_alive():
-        return jsonify({"status": "already_running"}), 400
+    with _detector_lock:
+        global detector, detector_thread
+        # Safety: ensure any previous detector thread is stopped before starting a new one
+        if detector_thread and detector_thread.is_alive():
+            if detector:
+                detector.stop()
+            detector_thread.join(timeout=3.0)
+        if detector_thread and detector_thread.is_alive():
+            return jsonify({"status": "already_running"}), 400
 
-    # Clear any residual frames/infractions from previous run
-    while not frame_queue.empty():
-        try:
-            frame_queue.get_nowait()
-        except queue.Empty:
-            break
-    while not infracoes_queue.empty():
-        try:
-            infracoes_queue.get_nowait()
-        except queue.Empty:
-            break
+        # Clear any residual frames/infractions from previous run
+        while not frame_queue.empty():
+            try:
+                frame_queue.get_nowait()
+            except queue.Empty:
+                break
+        while not infracoes_queue.empty():
+            try:
+                infracoes_queue.get_nowait()
+            except queue.Empty:
+                break
 
-    data         = request.get_json() or {}
-    source       = data.get("source", 0)
-    preset_name  = data.get("preset", "general")
-    camera_name  = data.get("camera_name", "Camera 1")
+        data         = request.get_json() or {}
+        source       = data.get("source", 0)
+        preset_name  = data.get("preset", "general")
+        camera_name  = data.get("camera_name", "Camera 1")
 
-    from infracoes.detector import InfracaoDetector
-    detector = InfracaoDetector(
-        source          = source,
-        preset_name     = preset_name,
-        models_dir      = str(_BACKEND / "models"),
-        output_dir      = str(_BACKEND / "outputs"),
-        camera_name     = camera_name,
-        show_window     = False,
-        desenhar_hud_completo = False,
-        frame_queue     = frame_queue,
-        infracoes_queue = infracoes_queue,
-    )
-    detector_thread = threading.Thread(target=detector.run, daemon=True)
-    detector_thread.start()
-    return jsonify({"status": "started"})
+        from infracoes.detector import InfracaoDetector
+        detector = InfracaoDetector(
+            source          = source,
+            preset_name     = preset_name,
+            models_dir      = str(_BACKEND / "models"),
+            output_dir      = str(_BACKEND / "outputs"),
+            camera_name     = camera_name,
+            show_window     = False,
+            desenhar_hud_completo = False,
+            frame_queue     = frame_queue,
+            infracoes_queue = infracoes_queue,
+        )
+        detector_thread = threading.Thread(target=detector.run, daemon=True)
+        detector_thread.start()
+        return jsonify({"status": "started"})
 
 
 @app.route("/api/stop", methods=["POST"])
 def api_stop():
-    if detector:
-        detector.stop()
-    if detector_thread and detector_thread.is_alive():
-        detector_thread.join(timeout=3.0)
-    return jsonify({"status": "stopped"})
+    with _detector_lock:
+        if detector:
+            detector.stop()
+        if detector_thread and detector_thread.is_alive():
+            detector_thread.join(timeout=3.0)
+        return jsonify({"status": "stopped"})
 
 
 # ── Standalone ────────────────────────────────────────────────────────────────
@@ -263,7 +266,7 @@ def _listar_curados(pasta: Path) -> list:
     if not pasta.exists():
         return []
     registros = []
-    for jf in sorted(pasta.glob("*.json")):
+    for jf in sorted(pasta.rglob("*.json")):
         try:
             with open(jf, encoding="utf-8") as fh:
                 rec = json.load(fh)
