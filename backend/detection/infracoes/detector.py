@@ -178,6 +178,7 @@ class InfracaoDetector:
 
     def _setup(self, width: int, height: int, fps: float):
         """Instancia todos os módulos com a resolução real da fonte."""
+        self.fps = fps
         raw = load_preset(self.preset_name)
 
 
@@ -272,7 +273,27 @@ class InfracaoDetector:
         # Fallback manual: usar caixa do preset quando o YOLO não localizar nada
         if not detected_lights and self._preset.get("semaforo_bbox"):
             detected_lights.append({"bbox": tuple(self._preset["semaforo_bbox"])})
-        # Debug output every 10 frames
+
+        contagem_classes = {"Carro": 0, "Moto": 0, "Pessoa": 0, "Semaforo": 0}
+        for t in tracks:
+            if t.cls_id == 0:
+                contagem_classes["Pessoa"] += 1
+            elif t.cls_id == 2:
+                contagem_classes["Carro"] += 1
+            elif t.cls_id == 3:
+                contagem_classes["Moto"] += 1
+        contagem_classes["Semaforo"] = len(detected_lights)
+
+        # Envia a contagem no máximo 1x por segundo, não a cada frame
+        fps_val = getattr(self, "fps", 30.0) or 30.0
+        if self.infracoes_queue is not None and self.frame_idx % max(1, int(fps_val)) == 0:
+            try:
+                self.infracoes_queue.put_nowait({
+                    "tipo_evento": "classes_detectadas",
+                    "contagem": contagem_classes,
+                })
+            except queue.Full:
+                pass
 
 
 

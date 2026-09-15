@@ -163,72 +163,7 @@
             </div>
           </div>
 
-          <!-- Right: animated detection preview -->
-          <!-- TODO: trocar por screenshot real de evidência quando backend/outputs/ tiver dados -->
-          <div class="cm-hero__preview">
-            <div class="cm-det-frame">
-              <!-- Header bar -->
-              <div class="cm-det-frame__header">
-                <div class="cm-det-live">
-                  <span class="cm-badge-dot cm-badge-dot--red" aria-hidden="true"></span>
-                  <span>REC · LIVE</span>
-                </div>
-                <span class="cm-det-cam">CAM-01 · Cruzamento Centro</span>
-                <div class="cm-det-fps cm-mono">30 FPS</div>
-              </div>
 
-              <!-- Annotated detection scene -->
-              <div class="cm-det-scene" role="img"
-                aria-label="Mockup de vídeo monitorado com detecções de veículos, pedestres e semáforos">
-                <div class="cm-det-scanline" aria-hidden="true"></div>
-
-                <!-- Reticle corners -->
-                <span class="cm-det-corner cm-det-corner--tl" aria-hidden="true"></span>
-                <span class="cm-det-corner cm-det-corner--tr" aria-hidden="true"></span>
-                <span class="cm-det-corner cm-det-corner--bl" aria-hidden="true"></span>
-                <span class="cm-det-corner cm-det-corner--br" aria-hidden="true"></span>
-
-                <!-- Bounding box 1: Semáforo (Vermelho) -->
-                <div class="cm-det-box cm-det-box--signal">
-                  <span class="cm-det-lbl">Semáforo 95%</span>
-                </div>
-
-                <!-- Bounding box 2: Carro (Ciano / Azul) -->
-                <div class="cm-det-box cm-det-box--car">
-                  <span class="cm-det-lbl">Carro 88%</span>
-                </div>
-
-                <!-- Bounding box 3: Pessoa / Pedestre (Roxo / Magenta) -->
-                <div class="cm-det-box cm-det-box--ped">
-                  <span class="cm-det-lbl">Pessoa 91%</span>
-                </div>
-
-                <!-- Bounding box 4: Carro secundário (Azul) -->
-                <div class="cm-det-box cm-det-box--car2">
-                  <span class="cm-det-lbl">Carro 92%</span>
-                </div>
-
-                <!-- Alert overlay -->
-                <div class="cm-det-alert cm-det-alert--pulse">
-                  <span class="cm-det-alert__icon" aria-hidden="true">⚠️</span>
-                  <span>AVANÇO PROVÁVEL</span>
-                </div>
-
-                <!-- Overlay Confidence / Model -->
-                <div class="cm-det-conf">
-                  <span class="cm-det-conf__label">Modelo Ativo</span>
-                  <span class="cm-det-conf__value">YOLOv8n</span>
-                </div>
-              </div>
-
-              <!-- Footer bar -->
-              <div class="cm-det-frame__footer">
-                <span>ByteTrack ID #108</span>
-                <span>Latência: 18ms</span>
-                <span>4 detecções</span>
-              </div>
-            </div>
-          </div>
 
         </div>
       </div><!-- /hero -->
@@ -578,6 +513,7 @@
             <img id="anal-screenshot" src="" alt="Screenshot da infração detectada" class="cm-screenshot" />
             <div class="cm-occurrence-card__media-overlay">
               <span class="cm-badge cm-badge--red" id="anal-tipo-badge">—</span>
+              <span id="anal-sim-badge" class="cm-badge cm-badge--warning hidden">🎮 Simulação (GTA)</span>
             </div>
           </div>
           <div class="cm-occurrence-card__meta">
