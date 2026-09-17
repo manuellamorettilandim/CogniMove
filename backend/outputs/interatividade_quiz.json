@@ -1,0 +1,119 @@
+{
+  "interatividade_invasao_faixa_01": {
+    "clip": "interatividade_clips/interatividade_invasao_faixa_01.mp4",
+    "camera": "gta_cam1",
+    "tipo": "INVASAO_FAIXA",
+    "causa_principal": "Pintura desgastada / ausente",
+    "causa_confianca": 0.35,
+    "perguntas": [
+      {
+        "id": "percepcao",
+        "prompt": "Qual infração você identificou no vídeo?",
+        "opcoes": [
+          { "id": "a", "texto": "Avanço de sinal vermelho" },
+          { "id": "b", "texto": "Invasão de faixa de pedestres/bike box" },
+          { "id": "c", "texto": "Bloqueio de cruzamento" }
+        ],
+        "correta": "b"
+      },
+      {
+        "id": "diagnostico",
+        "prompt": "Na sua opinião, qual foi a causa mais provável dessa infração?",
+        "opcoes": [
+          { "id": "a", "texto": "Pintura desgastada / ausente" },
+          { "id": "b", "texto": "Sinalização pouco visível" },
+          { "id": "c", "texto": "Conduta do condutor" }
+        ],
+        "correta": "a"
+      },
+      {
+        "id": "localizacao",
+        "prompt": "Em que parte da tela a infração aconteceu?",
+        "opcoes": [
+          { "id": "a", "texto": "Esquerda" },
+          { "id": "b", "texto": "Centro" },
+          { "id": "c", "texto": "Direita" }
+        ],
+        "correta": "c"
+      }
+    ]
+  },
+  "interatividade_bloqueio_cruzamento_01": {
+    "clip": "interatividade_clips/interatividade_bloqueio_cruzamento_01.mp4",
+    "camera": "gta_cam1",
+    "tipo": "BLOQUEIO_CRUZAMENTO",
+    "causa_principal": "Congestionamento",
+    "causa_confianca": 0.45,
+    "perguntas": [
+      {
+        "id": "percepcao",
+        "prompt": "Qual infração você identificou no vídeo?",
+        "opcoes": [
+          { "id": "a", "texto": "Avanço de sinal vermelho" },
+          { "id": "b", "texto": "Invasão de faixa de pedestres/bike box" },
+          { "id": "c", "texto": "Bloqueio de cruzamento" }
+        ],
+        "correta": "c"
+      },
+      {
+        "id": "diagnostico",
+        "prompt": "Na sua opinião, qual foi a causa mais provável dessa infração?",
+        "opcoes": [
+          { "id": "a", "texto": "Congestionamento" },
+          { "id": "b", "texto": "Tempo semafórico inadequado" },
+          { "id": "c", "texto": "Conduta do condutor" }
+        ],
+        "correta": "a"
+      },
+      {
+        "id": "localizacao",
+        "prompt": "Em que parte da tela a infração aconteceu?",
+        "opcoes": [
+          { "id": "a", "texto": "Esquerda" },
+          { "id": "b", "texto": "Centro" },
+          { "id": "c", "texto": "Direita" }
+        ],
+        "correta": "c"
+      }
+    ]
+  },
+  "interatividade_avanco_sinal_01": {
+    "clip": "interatividade_clips/interatividade_avanco_sinal_01.mp4",
+    "camera": "farol_gta_cam1",
+    "tipo": "AVANCO_SINAL_VERMELHO",
+    "causa_principal": "Tempo semafórico inadequado",
+    "causa_confianca": 0.35,
+    "perguntas": [
+      {
+        "id": "percepcao",
+        "prompt": "Qual infração você identificou no vídeo?",
+        "opcoes": [
+          { "id": "a", "texto": "Avanço de sinal vermelho" },
+          { "id": "b", "texto": "Invasão de faixa de pedestres/bike box" },
+          { "id": "c", "texto": "Bloqueio de cruzamento" }
+        ],
+        "correta": "a"
+      },
+      {
+        "id": "diagnostico",
+        "prompt": "Na sua opinião, qual foi a causa mais provável dessa infração?",
+        "opcoes": [
+          { "id": "a", "texto": "Tempo semafórico inadequado" },
+          { "id": "b", "texto": "Conduta do condutor" },
+          { "id": "c", "texto": "Congestionamento" }
+        ],
+        "correta": "a"
+      },
+      {
+        "id": "localizacao",
+        "prompt": "Em que parte da tela a infração aconteceu?",
+        "opcoes": [
+          { "id": "a", "texto": "Esquerda" },
+          { "id": "b", "texto": "Centro" },
+          { "id": "c", "texto": "Direita" }
+        ],
+        "correta": "a"
+      }
+    ]
+  }
+}

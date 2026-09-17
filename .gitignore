@@ -8,7 +8,8 @@ backend/outputs/runs/
 
 # Datasets e saídas de execução (arquivos pesados)
 backend/training/datasets/
-backend/outputs/
+backend/outputs/*
+!backend/outputs/interatividade_quiz.json
 backend/outputs/uploads/
 
 # Vídeos anotados gerados localmente (--salvar-video)

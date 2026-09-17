@@ -35,7 +35,13 @@ VIDEOS = [
         "preset": "gta2",
         "camera": "gta_cam1",
     },
-
+    {
+        "id": "video_teste6",
+        "grupo": "gta",
+        "path": str(_ROOT / "videos_originais" / "video_teste6_recorte.mp4"),
+        "preset": "farol_gta",
+        "camera": "farol_gta_cam1",
+    },
 ]
 
 def main():

@@ -82,21 +82,25 @@ const Utils = (() => {
     setTimeout(() => el.remove(), duration);
   }
 
+  function _limparPath(path) {
+    if (!path) return null;
+    if (path.includes(':') || path.startsWith('\\') || path.startsWith('/')) {
+      const partes = path.split(/[\\/]/);
+      return partes.length >= 2 ? partes.slice(-2).join('/') : partes.pop();
+    }
+    return path.replace(/\\/g, '/'); // caminho relativo já limpo, usa inteiro
+  }
+
   /** Retorna URL de clip relativa ao endpoint /clips/ */
   function clipUrl(path) {
-    if (!path) return null;
-    // path pode ser absoluto do sistema ou só o nome do arquivo
-    const partes = path.split(/[\\/]/);
-    const name = partes.length >= 2 ? partes.slice(-2).join('/') : partes.pop();
-    return `/clips/${name}`;
+    const name = _limparPath(path);
+    return name ? `/clips/${name}` : null;
   }
 
   /** Retorna URL de screenshot */
   function screenshotUrl(path) {
-    if (!path) return null;
-    const partes = path.split(/[\\/]/);
-    const name = partes.length >= 2 ? partes.slice(-2).join('/') : partes.pop();
-    return `/clips/${name}`;
+    const name = _limparPath(path);
+    return name ? `/clips/${name}` : null;
   }
 
   return { tipoLabel, tipoClass, tipoBadgeClass, formatTimestamp, formatConf, fetchJSON, showToast, clipUrl, screenshotUrl };
@@ -485,12 +489,6 @@ const AnaliseModule = (() => {
     _set('anal-classe', occ.classe || '—');
     _set('anal-track', occ.track_id ?? '—');
 
-    const conf = parseFloat(occ.confianca) || 0;
-    const confPct = conf <= 1 ? conf * 100 : conf;
-    _set('anal-confianca', confPct.toFixed(1) + '%');
-    const fill = document.getElementById('anal-conf-bar-fill');
-    if (fill) fill.style.width = confPct + '%';
-
     // Screenshot
     const screenshotEl = document.getElementById('anal-screenshot');
     const ssUrl = Utils.screenshotUrl(occ.screenshot);
@@ -857,43 +855,20 @@ const RelatorioModule = (() => {
    - Quiz: 3 opções (1 correta + 2 distratoras) embaralhadas
 ══════════════════════════════════════════════════════════════════════════ */
 const InteratividadeModule = (() => {
-  const MAX_POOL = 6;
-  const TODOS_TIPOS = [
-    'AVANCO_SINAL_VERMELHO',
-    'INVASAO_FAIXA',
-    'BLOQUEIO_CRUZAMENTO',
-  ];
   const CHART_COLORS = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
 
-  let _curadosGTA = [];   // todas as ocorrências carregadas
-  let _pool = [];   // fila embaralhada da sessão
-  let _vistas = 0;    // quantas foram vistas nesta sessão
-  let _atual = null; // ocorrência corrente
-  let _respostaUser = null; // tipo escolhido pelo usuário no quiz
+  let _quizData = {};
+  let _quizAtual = null;
+  let _perguntaIdx = 0;
+  let _respostas = [];
+  let _vistas = 0;
   let _causaResult = null;
   let _wizChart = null;
   let _loaded = false;
   let _step = 1;    // 1=início, 2=vídeo, 3=quiz, 4=resultado
 
-  // ── Utils ────────────────────────────────────────────────────────────────
-
-  function _shuffle(arr) {
-    const a = [...arr];
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  }
-
-  function _refillPool() {
-    // Garante pool com pelo menos MAX_POOL itens (ou todos se < MAX_POOL)
-    const base = _curadosGTA.length > 0 ? _curadosGTA : [];
-    _pool = _shuffle(base).slice(0, MAX_POOL);
-  }
-
   function _updateCounter() {
-    const total = Math.min(_curadosGTA.length, MAX_POOL);
+    const total = Object.keys(_quizData).length;
     const el = document.getElementById('wiz-counter-text');
     if (el) el.textContent = `${_vistas} de ${total} vistas`;
   }
@@ -903,21 +878,20 @@ const InteratividadeModule = (() => {
   async function onEnter() {
     if (_loaded) return;
     _loaded = true;
-    await _loadGTA();
+    await _loadQuiz();
   }
 
-  async function _loadGTA() {
+  async function _loadQuiz() {
     try {
-      _curadosGTA = await Utils.fetchJSON('/api/curados/gta');
+      _quizData = await Utils.fetchJSON('/api/interatividade/quiz');
     } catch {
-      _curadosGTA = [];
+      _quizData = {};
     }
-    _refillPool();
     _updateCounter();
 
     const semEl = document.getElementById('wiz-sem-ocorrencias');
     const btnEl = document.getElementById('wiz-btn-iniciar');
-    if (_curadosGTA.length === 0) {
+    if (Object.keys(_quizData).length === 0) {
       if (semEl) semEl.style.display = '';
       if (btnEl) btnEl.disabled = true;
     } else {
@@ -929,23 +903,20 @@ const InteratividadeModule = (() => {
   // ── Sorteio ──────────────────────────────────────────────────────────────
 
   function sortearEIniciar() {
-    if (_pool.length === 0) {
-      // Esgotou a sessão — reinicia pool para nova sessão
-      _vistas = 0;
-      _refillPool();
-      _updateCounter();
-    }
-    if (_pool.length === 0) {
-      Utils.showToast('Nenhuma ocorrência disponível ainda.', 'info');
+    const keys = Object.keys(_quizData);
+    if (keys.length === 0) {
+      Utils.showToast('Nenhum quiz disponível no momento.', 'info');
       return;
     }
-    _atual = _pool.shift();  // retira do início da fila embaralhada
-    _respostaUser = null;
-    _causaResult = null;
+
+    const randomKey = keys[Math.floor(Math.random() * keys.length)];
+    _quizAtual = _quizData[randomKey];
+    _perguntaIdx = 0;
+    _respostas = [];
 
     // Carrega vídeo no player
     const player = document.getElementById('wiz-clip-player');
-    const clipUrl = Utils.clipUrl(_atual.clip);
+    const clipUrl = Utils.clipUrl(_quizAtual.clip);
     if (player && clipUrl) {
       player.src = clipUrl;
       player.load();
@@ -954,11 +925,9 @@ const InteratividadeModule = (() => {
     // Metadados da câmera
     const metaEl = document.getElementById('wiz-clip-meta');
     const camEl = document.getElementById('wiz-clip-camera');
-    const confEl = document.getElementById('wiz-clip-conf');
-    if (metaEl && _atual.camera) {
+    if (metaEl && _quizAtual.camera) {
       metaEl.style.display = '';
-      if (camEl) camEl.textContent = _atual.camera || '—';
-      if (confEl) confEl.textContent = Utils.formatConf(_atual.confianca);
+      if (camEl) camEl.textContent = _quizAtual.camera || '—';
     }
 
     irParaStep(2);
@@ -989,7 +958,7 @@ const InteratividadeModule = (() => {
     });
 
     // Ações por passo
-    if (n === 3) _renderQuiz();
+    if (n === 3) _renderPerguntaAtual();
     if (n === 4) _renderResultado();
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -997,115 +966,133 @@ const InteratividadeModule = (() => {
 
   // ── Quiz ────────────────────────────────────────────────────────────────
 
-  function _renderQuiz() {
-    if (!_atual) return;
+  function _renderPerguntaAtual() {
+    if (!_quizAtual || !_quizAtual.perguntas) return;
+    const pergunta = _quizAtual.perguntas[_perguntaIdx];
+    if (!pergunta) return;
+
+    const contadorEl = document.getElementById('wiz-pergunta-contador');
+    if (contadorEl) {
+      contadorEl.textContent = `Pergunta ${_perguntaIdx + 1} de ${_quizAtual.perguntas.length}`;
+    }
+
+    const titleEl = document.getElementById('wiz-quiz-title');
+    if (titleEl) {
+      titleEl.textContent = pergunta.prompt;
+    }
 
     const container = document.getElementById('wiz-quiz-opcoes');
-    const btnConfirmar = document.getElementById('wiz-btn-confirmar');
     if (!container) return;
-    if (btnConfirmar) btnConfirmar.disabled = true;
-    _respostaUser = null;
 
-    // Monta opções: 1 correta + 2 distratoras embaralhadas
-    const distratoras = TODOS_TIPOS.filter(t => t !== _atual.tipo);
-    const opcoes = _shuffle([_atual.tipo, ...distratoras]);
-
-    container.innerHTML = opcoes.map(tipo => `
-      <button class="cm-quiz-opcao" data-tipo="${tipo}"
-              onclick="InteratividadeModule.selecionarResposta('${tipo}')"
-              role="radio" aria-checked="false">
-        <span class="cm-quiz-opcao__icon" aria-hidden="true">${_tipoIcon(tipo)}</span>
-        <span class="cm-quiz-opcao__label">${Utils.tipoLabel(tipo)}</span>
+    container.innerHTML = pergunta.opcoes.map(opt => `
+      <button class="cm-quiz-opcao"
+              onclick="InteratividadeModule.responderOpcao('${opt.id}')">
+        <span class="cm-quiz-opcao__label">${opt.texto}</span>
       </button>
     `).join('');
   }
 
-  function _tipoIcon(tipo) {
-    const icons = {
-      AVANCO_SINAL_VERMELHO: '🚦',
-      INVASAO_FAIXA: '🚷',
-      BLOQUEIO_CRUZAMENTO: '🚧',
-    };
-    return icons[tipo] || '❓';
-  }
+  function responderOpcao(opcaoId) {
+    if (!_quizAtual || !_quizAtual.perguntas) return;
+    const pergunta = _quizAtual.perguntas[_perguntaIdx];
+    if (!pergunta) return;
 
-  function selecionarResposta(tipo) {
-    _respostaUser = tipo;
-    document.querySelectorAll('.cm-quiz-opcao').forEach(btn => {
-      const isSelected = btn.dataset.tipo === tipo;
-      btn.classList.toggle('is-selected', isSelected);
-      btn.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+    _respostas.push({
+      perguntaId: pergunta.id,
+      escolhida: opcaoId,
+      correta: opcaoId === pergunta.correta
     });
-    const btn = document.getElementById('wiz-btn-confirmar');
-    if (btn) btn.disabled = false;
+
+    _perguntaIdx++;
+
+    if (_perguntaIdx < _quizAtual.perguntas.length) {
+      _renderPerguntaAtual();
+    } else {
+      irParaStep(4);
+    }
   }
 
   // ── Resultado ────────────────────────────────────────────────────────────
 
   async function _renderResultado() {
-    if (!_atual) return;
+    if (!_quizAtual || !_quizAtual.perguntas) return;
 
-    // Incrementa contador ao chegar no resultado
     _vistas++;
     _updateCounter();
-    if (_vistas >= Math.min(_curadosGTA.length, MAX_POOL)) {
-      // Esgotou — botão "Próxima" passa a reiniciar sessão
-      const btnProx = document.getElementById('wiz-btn-proxima');
-      if (btnProx) btnProx.textContent = '🔄  Reiniciar sessão';
-    }
 
-    const acertou = _respostaUser === _atual.tipo;
+    const total = _quizAtual.perguntas.length;
+    const acertos = _respostas.filter(r => r.correta).length;
 
     // Header de acerto/erro
     const headerEl = document.getElementById('wiz-resultado-header');
     if (headerEl) {
-      headerEl.innerHTML = acertou
-        ? `<div class="cm-resultado-acerto"><span class="cm-resultado-emoji">✅</span><span class="cm-resultado-msg">Você acertou! O CogniMove também detectou <strong>${Utils.tipoLabel(_atual.tipo)}</strong>.</span></div>`
-        : `<div class="cm-resultado-erro"><span class="cm-resultado-emoji">❌</span><span class="cm-resultado-msg">Sua resposta: <strong>${Utils.tipoLabel(_respostaUser || '—')}</strong> — A detecção correta foi: <strong>${Utils.tipoLabel(_atual.tipo)}</strong>.</span></div>`;
+      headerEl.innerHTML = `
+        <div class="${acertos === total ? 'cm-resultado-acerto' : (acertos > 0 ? 'cm-resultado-acerto' : 'cm-resultado-erro')}">
+          <span class="cm-resultado-emoji">${acertos === total ? '🎉' : (acertos > 0 ? '📊' : '❌')}</span>
+          <span class="cm-resultado-msg">Você acertou <strong>${acertos} de ${total}</strong> perguntas no quiz!</span>
+        </div>
+      `;
     }
 
-    // Sua resposta
-    const userTipoEl = document.getElementById('wiz-user-tipo');
-    if (userTipoEl) userTipoEl.textContent = `Você respondeu: ${Utils.tipoLabel(_respostaUser || '—')}`;
-    const userAcertoEl = document.getElementById('wiz-user-acerto');
-    if (userAcertoEl) userAcertoEl.textContent = acertou ? '✅ Resposta correta!' : '❌ Resposta incorreta.';
+    // Suas Respostas
+    const userListEl = document.getElementById('wiz-user-respostas-list');
+    if (userListEl) {
+      userListEl.innerHTML = _quizAtual.perguntas.map((p, idx) => {
+        const resp = _respostas.find(r => r.perguntaId === p.id) || _respostas[idx];
+        const optEscolhida = p.opcoes.find(o => o.id === resp?.escolhida);
+        const acertou = resp?.correta;
 
-    // CogniMove
-    const cmTipoEl = document.getElementById('wiz-cm-tipo');
-    if (cmTipoEl) cmTipoEl.textContent = `Infração detectada: ${Utils.tipoLabel(_atual.tipo)}`;
+        return `
+          <div class="cm-resultado-item" style="display:flex; flex-direction:column; align-items:flex-start; margin-bottom:12px; gap:4px;">
+            <span style="font-weight:600;">${idx + 1}. ${p.prompt}</span>
+            <span style="color:${acertou ? 'var(--success, #10B981)' : 'var(--danger, #EF4444)'}; font-size:0.9rem;">
+              ${acertou ? '✅' : '❌'} <strong>Sua resposta:</strong> ${optEscolhida ? optEscolhida.texto : '—'}
+            </span>
+          </div>
+        `;
+      }).join('');
+    }
 
+    // Análise CogniMove
+    const cmListEl = document.getElementById('wiz-cm-analise-list');
+    if (cmListEl) {
+      cmListEl.innerHTML = _quizAtual.perguntas.map((p, idx) => {
+        const optCorreta = p.opcoes.find(o => o.id === p.correta);
+        return `
+          <div class="cm-resultado-item" style="display:flex; flex-direction:column; align-items:flex-start; margin-bottom:12px; gap:4px;">
+            <span style="font-weight:600;">${idx + 1}. ${p.prompt}</span>
+            <span style="color:var(--success, #10B981); font-size:0.9rem;">
+              ✓ <strong>Resposta correta:</strong> ${optCorreta ? optCorreta.texto : '—'}
+            </span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Badge infração
     const cmInfBadge = document.getElementById('wiz-cm-infracao-badge');
     if (cmInfBadge) {
-      cmInfBadge.textContent = Utils.tipoLabel(_atual.tipo);
-      cmInfBadge.className = `cm-badge cm-badge--lg ${Utils.tipoBadgeClass(_atual.tipo)}`;
+      cmInfBadge.textContent = Utils.tipoLabel(_quizAtual.tipo);
+      cmInfBadge.className = `cm-badge cm-badge--lg ${Utils.tipoBadgeClass(_quizAtual.tipo)}`;
     }
-    const confBadge = document.getElementById('wiz-cm-conf-badge');
-    if (confBadge) confBadge.textContent = Utils.formatConf(_atual.confianca);
 
     // Causa-raiz
     try {
-      _causaResult = await Utils.fetchJSON(`/api/causa_raiz?tipo=${encodeURIComponent(_atual.tipo)}`);
+      _causaResult = await Utils.fetchJSON(`/api/causa_raiz?tipo=${encodeURIComponent(_quizAtual.tipo)}`);
     } catch {
       _causaResult = {
-        causa_principal: _atual.causa_principal || '—',
-        confianca: parseFloat(_atual.causa_confianca) || 0,
+        causa_principal: _quizAtual.causa_principal || '—',
+        confianca: parseFloat(_quizAtual.causa_confianca) || 0,
         distribuicao: {},
-        fatores_ativos: _atual.cenarios_ativos ? _atual.cenarios_ativos.split(', ').filter(Boolean) : [],
+        fatores_ativos: [],
       };
-      if (_atual.distribuicao_causas) {
-        try {
-          _causaResult.distribuicao = typeof _atual.distribuicao_causas === 'string'
-            ? JSON.parse(_atual.distribuicao_causas)
-            : _atual.distribuicao_causas;
-        } catch { }
-      }
     }
 
     const cmCausa = document.getElementById('wiz-cm-causa');
-    if (cmCausa) cmCausa.textContent = _causaResult.causa_principal || '—';
+    if (cmCausa) cmCausa.textContent = _causaResult.causa_principal || _quizAtual.causa_principal || '—';
     const cmCausaPct = document.getElementById('wiz-cm-causa-pct');
-    const causaConf = parseFloat(_causaResult.confianca) * 100;
-    if (cmCausaPct) cmCausaPct.textContent = (isNaN(causaConf) ? 0 : causaConf).toFixed(0) + '%';
+    const causaConf = (parseFloat(_causaResult.confianca) || parseFloat(_quizAtual.causa_confianca) || 0) * 100;
+    if (cmCausaPct) cmCausaPct.textContent = causaConf.toFixed(0) + '%';
 
     const fatEl = document.getElementById('wiz-cm-fatores');
     const fatores = Array.isArray(_causaResult.fatores_ativos) ? _causaResult.fatores_ativos : [];
@@ -1153,31 +1140,19 @@ const InteratividadeModule = (() => {
   // ── Reiniciar ────────────────────────────────────────────────────────────
 
   function reiniciar() {
-    _atual = null;
-    _respostaUser = null;
-    _causaResult = null;
-
-    // Replenish pool if empty
-    if (_pool.length === 0) {
-      _vistas = 0;
-      _refillPool();
-    }
+    _quizAtual = null;
+    _perguntaIdx = 0;
+    _respostas = [];
 
     _updateCounter();
 
     const player = document.getElementById('wiz-clip-player');
     if (player) { player.src = ''; player.load(); }
 
-    const btnProx = document.getElementById('wiz-btn-proxima');
-    if (btnProx) {
-      const remaining = _pool.length;
-      btnProx.textContent = remaining > 0 ? '🎲  Próxima ocorrência' : '🔄  Reiniciar sessão';
-    }
-
     irParaStep(1);
   }
 
-  return { onEnter, sortearEIniciar, selecionarResposta, irParaStep, reiniciar };
+  return { onEnter, sortearEIniciar, responderOpcao, irParaStep, reiniciar };
 })();
 
 

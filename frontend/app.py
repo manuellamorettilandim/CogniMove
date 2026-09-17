@@ -289,6 +289,15 @@ def api_curados_gta():
     return jsonify(_listar_curados(_CURADOS_GTA))
 
 
+@app.route("/api/interatividade/quiz")
+def api_interatividade_quiz():
+    caminho = _BACKEND / "outputs" / "interatividade_quiz.json"
+    if not caminho.exists():
+        return jsonify({})
+    with open(caminho, encoding="utf-8") as f:
+        return jsonify(json.load(f))
+
+
 @app.route("/clips/<path:filename>")
 @app.route("/static/clips/<path:filename>")
 def servir_clip(filename):

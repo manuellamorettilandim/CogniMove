@@ -521,15 +521,7 @@
               <span class="cm-meta-key">Track ID</span>
               <span class="cm-meta-val cm-mono" id="anal-track">—</span>
             </div>
-            <div class="cm-meta-row">
-              <span class="cm-meta-key">Confiança IA</span>
-              <div class="cm-conf-bar-wrap">
-                <div class="cm-conf-bar">
-                  <div class="cm-conf-bar__fill" id="anal-conf-bar-fill" style="width:0%"></div>
-                </div>
-                <span class="cm-conf-val" id="anal-confianca">—</span>
-              </div>
-            </div>
+
           </div>
 
           <!-- Clip player -->
@@ -796,9 +788,6 @@
             <div class="cm-wiz-clip-meta cm-card mt-3" id="wiz-clip-meta" style="display:none">
               <span class="cm-label">Câmera:</span>
               <span id="wiz-clip-camera" class="cm-text-muted">—</span>
-              &nbsp;·&nbsp;
-              <span class="cm-label">Confiança IA:</span>
-              <span id="wiz-clip-conf" class="cm-text-muted">—</span>
             </div>
           </div>
         </div>
@@ -816,20 +805,17 @@
 
       <!-- ─── PAINEL 3: QUIZ ──────────────────────────────────────────── -->
       <div id="wiz-panel-3" class="cm-wizard-panel hidden">
-        <h3 class="cm-wizard-title">Qual foi a infração detectada?</h3>
-        <p class="cm-wizard-desc">Com base no vídeo assistido, escolha a infração que você identificou.</p>
+        <h3 class="cm-wizard-title" id="wiz-quiz-title">Quiz sobre a Ocorrência</h3>
+        <p class="cm-wizard-desc" id="wiz-quiz-desc">Com base no vídeo assistido, responda às perguntas abaixo.</p>
 
-        <div class="cm-quiz-opcoes" id="wiz-quiz-opcoes" role="radiogroup" aria-label="Opções de infração">
+        <p class="cm-text-muted text-sm mb-2" id="wiz-pergunta-contador">Pergunta 1 de 3</p>
+        <div class="cm-quiz-opcoes" id="wiz-quiz-opcoes" role="radiogroup" aria-label="Opções de resposta">
           <!-- Preenchido dinamicamente pelo JS -->
         </div>
 
         <div class="cm-wizard-actions">
           <button class="cm-btn cm-btn--ghost" onclick="InteratividadeModule.irParaStep(2)">
             ← Rever vídeo
-          </button>
-          <button id="wiz-btn-confirmar" class="cm-btn cm-btn--primary cm-btn--lg" disabled
-            onclick="InteratividadeModule.irParaStep(4)">
-            Confirmar Resposta&nbsp; →
           </button>
         </div>
       </div>
@@ -842,40 +828,17 @@
 
           <!-- Left: Sua resposta -->
           <div class="cm-resultado-col cm-card">
-            <h4 class="cm-resultado-col__title">Sua Resposta</h4>
-            <div class="cm-resultado-list">
-              <div class="cm-resultado-item">
-                <span class="cm-resultado-item__num">1.</span>
-                <span class="cm-resultado-item__text" id="wiz-user-tipo">—</span>
-              </div>
-              <div class="cm-resultado-item">
-                <span class="cm-resultado-item__num">2.</span>
-                <span class="cm-resultado-item__text" id="wiz-user-acerto">—</span>
-              </div>
+            <h4 class="cm-resultado-col__title">Suas Respostas</h4>
+            <div class="cm-resultado-list" id="wiz-user-respostas-list">
+              <!-- Preenchido dinamicamente com as 3 perguntas e escolhas do usuário -->
             </div>
           </div>
 
           <!-- Right: Análise CogniMove -->
           <div class="cm-resultado-col cm-card">
             <h4 class="cm-resultado-col__title">Análise do CogniMove</h4>
-            <div class="cm-resultado-list">
-              <div class="cm-resultado-item">
-                <span class="cm-resultado-item__num">1.</span>
-                <span class="cm-resultado-item__text" id="wiz-cm-tipo">—</span>
-              </div>
-              <div class="cm-resultado-item">
-                <span class="cm-resultado-item__num">2.</span>
-                <span class="cm-resultado-item__text">
-                  Causa Raiz Probabilística:
-                  <strong id="wiz-cm-causa">—</strong>
-                  (<span id="wiz-cm-causa-pct">—</span>)
-                </span>
-              </div>
-              <div class="cm-resultado-item">
-                <span class="cm-resultado-item__num">3.</span>
-                <span class="cm-resultado-item__text" id="wiz-cm-fatores">Integração com dados urbanos: nenhum fator
-                  ativo</span>
-              </div>
+            <div class="cm-resultado-list" id="wiz-cm-analise-list">
+              <!-- Preenchido dinamicamente com os gabaritos das 3 perguntas -->
             </div>
 
             <div class="cm-resultado-infracao">
