@@ -267,6 +267,7 @@
                   Norte</option>
                 <option value="video_teste5_recorte.mp4" data-preset="gta2">video_teste5_recorte.mp4 — Simulação (GTA)
                 </option>
+                <option value="video_teste6_recorte.mp4" data-preset="farol_gta">video_teste6_recorte.mp4 — Simulação (GTA) Sinal Vermelho</option>
               </select>
               <button id="mon-btn-start" class="cm-btn cm-btn--primary" onclick="MonitorModule.start()" disabled>
                 ▶&nbsp; Iniciar
@@ -348,7 +349,7 @@
                     <circle cx="12" cy="7" r="4" />
                   </svg>
                 </span>
-                <span class="cm-class-stat__label">Pessoas</span>
+                <span class="cm-class-stat__label">Pessoa/Objeto</span>
                 <span class="cm-class-stat__value" id="mon-class-pessoas">0</span>
               </div>
               <div class="cm-class-stat cm-class-stat--light">
@@ -845,6 +846,12 @@
               <span class="cm-label">Infração Identificada</span>
               <span class="cm-badge cm-badge--red cm-badge--lg" id="wiz-cm-infracao-badge">—</span>
               <span class="cm-badge cm-badge--green cm-badge--lg" id="wiz-cm-conf-badge">—</span>
+            </div>
+            <div id="wiz-nota-contexto-wrap" class="mt-4" style="display:none;">
+              <div style="background: var(--primary-light, rgba(139,92,246,0.1)); border: 1px solid var(--primary, #8B5CF6); border-radius: 8px; padding: 12px 16px; display: flex; gap: 10px; align-items: flex-start;">
+                <span style="font-size: 1.1rem; flex-shrink: 0;">💡</span>
+                <p id="wiz-nota-contexto" class="text-sm" style="margin: 0; line-height: 1.5;"></p>
+              </div>
             </div>
 
             <div class="mt-4">

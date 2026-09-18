@@ -1076,6 +1076,17 @@ const InteratividadeModule = (() => {
       cmInfBadge.className = `cm-badge cm-badge--lg ${Utils.tipoBadgeClass(_quizAtual.tipo)}`;
     }
 
+    // Nota de contexto
+    const notaEl = document.getElementById('wiz-nota-contexto');
+    const notaWrapEl = document.getElementById('wiz-nota-contexto-wrap');
+    if (_quizAtual.nota_contexto) {
+      if (notaEl) notaEl.textContent = _quizAtual.nota_contexto;
+      if (notaWrapEl) notaWrapEl.style.display = '';
+    } else {
+      if (notaEl) notaEl.textContent = '';
+      if (notaWrapEl) notaWrapEl.style.display = 'none';
+    }
+
     // Causa-raiz
     try {
       _causaResult = await Utils.fetchJSON(`/api/causa_raiz?tipo=${encodeURIComponent(_quizAtual.tipo)}`);
@@ -1148,6 +1159,11 @@ const InteratividadeModule = (() => {
 
     const player = document.getElementById('wiz-clip-player');
     if (player) { player.src = ''; player.load(); }
+
+    const notaWrapEl = document.getElementById('wiz-nota-contexto-wrap');
+    if (notaWrapEl) notaWrapEl.style.display = 'none';
+    const notaEl = document.getElementById('wiz-nota-contexto');
+    if (notaEl) notaEl.textContent = '';
 
     irParaStep(1);
   }

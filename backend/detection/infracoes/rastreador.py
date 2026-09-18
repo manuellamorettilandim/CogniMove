@@ -9,8 +9,8 @@ from ultralytics import YOLO
 # Classes COCO relevantes: person, bicycle, car, motorcycle, bus, truck
 VEHICLE_CLASSES = [0, 1, 2, 3, 5, 7]
 VEHICLE_NAMES   = {
-    0: "Pedestre", 1: "Bicicleta", 2: "Carro",
-    3: "Moto",     5: "Onibus",    7: "Caminhao",
+    0: "Pessoa/Objeto", 1: "Bicicleta", 2: "Carro",
+    3: "Moto",          5: "Onibus",    7: "Caminhao",
 }
 
 # Classes que representam veículos (motorizados e não-motorizados) que podem cometer infrações de trânsito
