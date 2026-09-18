@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-09-17T16:29:37.342571",
+  "tipo": "INVASAO_FAIXA",
+  "camera": "cruzamento_centro_cam1",
+  "classe": "Carro",
+  "track_id": 2,
+  "confianca": 0.789,
+  "causa_principal": "Pintura desgastada / ausente",
+  "causa_confianca": 0.35,
+  "cenarios_ativos": "",
+  "distribuicao_causas": {
+    "Pintura desgastada / ausente": 0.35,
+    "Sinalização pouco visível": 0.25,
+    "Ausência de segregador físico": 0.2,
+    "Conduta do condutor": 0.2
+  },
+  "frame": 1,
+  "descricao": "Invasão de Area 1",
+  "video_id": "video_teste1",
+  "preset": "cruzamento_centro",
+  "screenshot": "video_teste1/INVASAO_FAIXA_20260917_162937_ID2.jpg",
+  "clip": "video_teste1/INVASAO_FAIXA_20260917_162937_ID2.mp4"
+}

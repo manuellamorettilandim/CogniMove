@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-09-17T16:32:29.440511",
+  "tipo": "AVANCO_SINAL_VERMELHO",
+  "camera": "avenida_norte_cam2",
+  "classe": "Carro",
+  "track_id": 206,
+  "confianca": 0.833,
+  "causa_principal": "Tempo semafórico inadequado",
+  "causa_confianca": 0.35,
+  "cenarios_ativos": "",
+  "distribuicao_causas": {
+    "Tempo semafórico inadequado": 0.35,
+    "Congestionamento": 0.25,
+    "Conduta do condutor": 0.25,
+    "Sinalização pouco visível": 0.15
+  },
+  "frame": 381,
+  "descricao": "Cruzou Linha de Retencao com sinal VERMELHO",
+  "video_id": "video_teste2",
+  "preset": "avenida_norte",
+  "screenshot": "video_teste2/AVANCO_SINAL_VERMELHO_20260917_163229_ID206.jpg",
+  "clip": "video_teste2/AVANCO_SINAL_VERMELHO_20260917_163229_ID206.mp4"
+}

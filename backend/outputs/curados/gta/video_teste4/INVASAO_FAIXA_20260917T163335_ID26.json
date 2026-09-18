@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-09-17T16:33:35.086732",
+  "tipo": "INVASAO_FAIXA",
+  "camera": "gta_cam1",
+  "classe": "Carro",
+  "track_id": 26,
+  "confianca": 0.711,
+  "causa_principal": "Pintura desgastada / ausente",
+  "causa_confianca": 0.35,
+  "cenarios_ativos": "",
+  "distribuicao_causas": {
+    "Pintura desgastada / ausente": 0.35,
+    "Sinalização pouco visível": 0.25,
+    "Ausência de segregador físico": 0.2,
+    "Conduta do condutor": 0.2
+  },
+  "frame": 272,
+  "descricao": "Invasão de Area 1",
+  "video_id": "video_teste4",
+  "preset": "gta2",
+  "screenshot": "video_teste4/INVASAO_FAIXA_20260917_163335_ID26.jpg",
+  "clip": "video_teste4/INVASAO_FAIXA_20260917_163335_ID26.mp4"
+}

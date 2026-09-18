@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-09-17T16:33:59.729598",
+  "tipo": "BLOQUEIO_CRUZAMENTO",
+  "camera": "gta_cam1",
+  "classe": "Carro",
+  "track_id": 27,
+  "confianca": 0.532,
+  "causa_principal": "Congestionamento",
+  "causa_confianca": 0.45,
+  "cenarios_ativos": "",
+  "distribuicao_causas": {
+    "Congestionamento": 0.45,
+    "Tempo semafórico inadequado": 0.25,
+    "Conduta do condutor": 0.2,
+    "Sinalização pouco visível": 0.1
+  },
+  "frame": 422,
+  "descricao": "Bloqueio de cruzamento há 5.0s",
+  "video_id": "video_teste4",
+  "preset": "gta2",
+  "screenshot": "video_teste4/BLOQUEIO_CRUZAMENTO_20260917_163359_ID27.jpg",
+  "clip": "video_teste4/BLOQUEIO_CRUZAMENTO_20260917_163359_ID27.mp4"
+}

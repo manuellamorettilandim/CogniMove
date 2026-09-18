@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-09-17T16:31:56.807173",
+  "tipo": "INVASAO_FAIXA",
+  "camera": "avenida_norte_cam2",
+  "classe": "Carro",
+  "track_id": 112,
+  "confianca": 0.559,
+  "causa_principal": "Pintura desgastada / ausente",
+  "causa_confianca": 0.35,
+  "cenarios_ativos": "",
+  "distribuicao_causas": {
+    "Pintura desgastada / ausente": 0.35,
+    "Sinalização pouco visível": 0.25,
+    "Ausência de segregador físico": 0.2,
+    "Conduta do condutor": 0.2
+  },
+  "frame": 172,
+  "descricao": "Cruzou Linha 1",
+  "video_id": "video_teste2",
+  "preset": "avenida_norte",
+  "screenshot": "video_teste2/INVASAO_FAIXA_20260917_163156_ID112.jpg",
+  "clip": "video_teste2/INVASAO_FAIXA_20260917_163156_ID112.mp4"
+}

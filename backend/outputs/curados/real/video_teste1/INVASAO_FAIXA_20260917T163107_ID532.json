@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-09-17T16:31:07.267672",
+  "tipo": "INVASAO_FAIXA",
+  "camera": "cruzamento_centro_cam1",
+  "classe": "Carro",
+  "track_id": 532,
+  "confianca": 0.627,
+  "causa_principal": "Pintura desgastada / ausente",
+  "causa_confianca": 0.35,
+  "cenarios_ativos": "",
+  "distribuicao_causas": {
+    "Pintura desgastada / ausente": 0.35,
+    "Sinalização pouco visível": 0.25,
+    "Ausência de segregador físico": 0.2,
+    "Conduta do condutor": 0.2
+  },
+  "frame": 504,
+  "descricao": "Cruzou Linha 1",
+  "video_id": "video_teste1",
+  "preset": "cruzamento_centro",
+  "screenshot": "video_teste1/INVASAO_FAIXA_20260917_163107_ID532.jpg",
+  "clip": "video_teste1/INVASAO_FAIXA_20260917_163107_ID532.mp4"
+}

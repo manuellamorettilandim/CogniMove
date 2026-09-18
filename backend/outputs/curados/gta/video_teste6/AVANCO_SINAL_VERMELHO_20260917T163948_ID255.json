@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-09-17T16:39:48.750754",
+  "tipo": "AVANCO_SINAL_VERMELHO",
+  "camera": "farol_gta_cam1",
+  "classe": "Carro",
+  "track_id": 255,
+  "confianca": 0.687,
+  "causa_principal": "Tempo semafórico inadequado",
+  "causa_confianca": 0.35,
+  "cenarios_ativos": "",
+  "distribuicao_causas": {
+    "Tempo semafórico inadequado": 0.35,
+    "Congestionamento": 0.25,
+    "Conduta do condutor": 0.25,
+    "Sinalização pouco visível": 0.15
+  },
+  "frame": 1838,
+  "descricao": "Cruzou Retencao 1 com sinal VERMELHO",
+  "video_id": "video_teste6",
+  "preset": "farol_gta",
+  "screenshot": "video_teste6/AVANCO_SINAL_VERMELHO_20260917_163948_ID255.jpg",
+  "clip": "video_teste6/AVANCO_SINAL_VERMELHO_20260917_163948_ID255.mp4"
+}

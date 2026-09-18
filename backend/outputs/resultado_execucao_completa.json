@@ -1,0 +1,560 @@
+{
+  "video_teste1": {
+    "id": "video_teste1",
+    "grupo": "real",
+    "path": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\videos_originais\\video_teste_recorte.mp4",
+    "preset": "cruzamento_centro",
+    "camera": "cruzamento_centro_cam1",
+    "total_ocorrencias": 6,
+    "contagem_por_tipo": {
+      "INVASAO_FAIXA": 6
+    },
+    "ocorrencias": [
+      {
+        "timestamp": "2026-09-17T16:29:37.342571",
+        "frame": 1,
+        "tipo": "INVASAO_FAIXA",
+        "descricao": "Invasão de Area 1",
+        "track_id": 2,
+        "classe": "Carro",
+        "confianca": 0.789,
+        "camera": "cruzamento_centro_cam1",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste1\\evidencias\\screenshots\\INVASAO_FAIXA_20260917_162937_ID2.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste1\\evidencias\\clips\\INVASAO_FAIXA_20260917_162937_ID2.mp4",
+        "causa_principal": "Pintura desgastada / ausente",
+        "causa_confianca": 0.35,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Pintura desgastada / ausente": 0.35,
+          "Sinalização pouco visível": 0.25,
+          "Ausência de segregador físico": 0.2,
+          "Conduta do condutor": 0.2
+        }
+      },
+      {
+        "timestamp": "2026-09-17T16:29:40.105289",
+        "frame": 13,
+        "tipo": "INVASAO_FAIXA",
+        "descricao": "Cruzou Linha 1",
+        "track_id": 3,
+        "classe": "Carro",
+        "confianca": 0.737,
+        "camera": "cruzamento_centro_cam1",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste1\\evidencias\\screenshots\\INVASAO_FAIXA_20260917_162940_ID3.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste1\\evidencias\\clips\\INVASAO_FAIXA_20260917_162940_ID3.mp4",
+        "causa_principal": "Pintura desgastada / ausente",
+        "causa_confianca": 0.35,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Pintura desgastada / ausente": 0.35,
+          "Sinalização pouco visível": 0.25,
+          "Ausência de segregador físico": 0.2,
+          "Conduta do condutor": 0.2
+        }
+      },
+      {
+        "timestamp": "2026-09-17T16:30:35.457930",
+        "frame": 314,
+        "tipo": "INVASAO_FAIXA",
+        "descricao": "Cruzou Linha 1",
+        "track_id": 272,
+        "classe": "Carro",
+        "confianca": 0.6,
+        "camera": "cruzamento_centro_cam1",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste1\\evidencias\\screenshots\\INVASAO_FAIXA_20260917_163035_ID272.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste1\\evidencias\\clips\\INVASAO_FAIXA_20260917_163035_ID272.mp4",
+        "causa_principal": "Pintura desgastada / ausente",
+        "causa_confianca": 0.35,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Pintura desgastada / ausente": 0.35,
+          "Sinalização pouco visível": 0.25,
+          "Ausência de segregador físico": 0.2,
+          "Conduta do condutor": 0.2
+        }
+      },
+      {
+        "timestamp": "2026-09-17T16:30:38.125948",
+        "frame": 329,
+        "tipo": "INVASAO_FAIXA",
+        "descricao": "Invasão de Area 1",
+        "track_id": 299,
+        "classe": "Carro",
+        "confianca": 0.562,
+        "camera": "cruzamento_centro_cam1",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste1\\evidencias\\screenshots\\INVASAO_FAIXA_20260917_163038_ID299.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste1\\evidencias\\clips\\INVASAO_FAIXA_20260917_163038_ID299.mp4",
+        "causa_principal": "Pintura desgastada / ausente",
+        "causa_confianca": 0.35,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Pintura desgastada / ausente": 0.35,
+          "Sinalização pouco visível": 0.25,
+          "Ausência de segregador físico": 0.2,
+          "Conduta do condutor": 0.2
+        }
+      },
+      {
+        "timestamp": "2026-09-17T16:31:07.267672",
+        "frame": 504,
+        "tipo": "INVASAO_FAIXA",
+        "descricao": "Cruzou Linha 1",
+        "track_id": 532,
+        "classe": "Carro",
+        "confianca": 0.627,
+        "camera": "cruzamento_centro_cam1",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste1\\evidencias\\screenshots\\INVASAO_FAIXA_20260917_163107_ID532.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste1\\evidencias\\clips\\INVASAO_FAIXA_20260917_163107_ID532.mp4",
+        "causa_principal": "Pintura desgastada / ausente",
+        "causa_confianca": 0.35,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Pintura desgastada / ausente": 0.35,
+          "Sinalização pouco visível": 0.25,
+          "Ausência de segregador físico": 0.2,
+          "Conduta do condutor": 0.2
+        }
+      },
+      {
+        "timestamp": "2026-09-17T16:31:11.469127",
+        "frame": 528,
+        "tipo": "INVASAO_FAIXA",
+        "descricao": "Invasão de Area 1",
+        "track_id": 563,
+        "classe": "Carro",
+        "confianca": 0.637,
+        "camera": "cruzamento_centro_cam1",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste1\\evidencias\\screenshots\\INVASAO_FAIXA_20260917_163111_ID563.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste1\\evidencias\\clips\\INVASAO_FAIXA_20260917_163111_ID563.mp4",
+        "causa_principal": "Pintura desgastada / ausente",
+        "causa_confianca": 0.35,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Pintura desgastada / ausente": 0.35,
+          "Sinalização pouco visível": 0.25,
+          "Ausência de segregador físico": 0.2,
+          "Conduta do condutor": 0.2
+        }
+      }
+    ]
+  },
+  "video_teste2": {
+    "id": "video_teste2",
+    "grupo": "real",
+    "path": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\videos_originais\\video_teste2_recorte.mp4",
+    "preset": "avenida_norte",
+    "camera": "avenida_norte_cam2",
+    "total_ocorrencias": 11,
+    "contagem_por_tipo": {
+      "INVASAO_FAIXA": 9,
+      "AVANCO_SINAL_VERMELHO": 2
+    },
+    "ocorrencias": [
+      {
+        "timestamp": "2026-09-17T16:31:31.072409",
+        "frame": 13,
+        "tipo": "INVASAO_FAIXA",
+        "descricao": "Cruzou Linha 1",
+        "track_id": 17,
+        "classe": "Carro",
+        "confianca": 0.208,
+        "camera": "avenida_norte_cam2",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\screenshots\\INVASAO_FAIXA_20260917_163131_ID17.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\clips\\INVASAO_FAIXA_20260917_163131_ID17.mp4",
+        "causa_principal": "Pintura desgastada / ausente",
+        "causa_confianca": 0.35,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Pintura desgastada / ausente": 0.35,
+          "Sinalização pouco visível": 0.25,
+          "Ausência de segregador físico": 0.2,
+          "Conduta do condutor": 0.2
+        }
+      },
+      {
+        "timestamp": "2026-09-17T16:31:36.480235",
+        "frame": 43,
+        "tipo": "INVASAO_FAIXA",
+        "descricao": "Invasão de Area 2",
+        "track_id": 46,
+        "classe": "Onibus",
+        "confianca": 0.6,
+        "camera": "avenida_norte_cam2",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\screenshots\\INVASAO_FAIXA_20260917_163136_ID46.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\clips\\INVASAO_FAIXA_20260917_163136_ID46.mp4",
+        "causa_principal": "Pintura desgastada / ausente",
+        "causa_confianca": 0.35,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Pintura desgastada / ausente": 0.35,
+          "Sinalização pouco visível": 0.25,
+          "Ausência de segregador físico": 0.2,
+          "Conduta do condutor": 0.2
+        }
+      },
+      {
+        "timestamp": "2026-09-17T16:31:56.807173",
+        "frame": 172,
+        "tipo": "INVASAO_FAIXA",
+        "descricao": "Cruzou Linha 1",
+        "track_id": 112,
+        "classe": "Carro",
+        "confianca": 0.559,
+        "camera": "avenida_norte_cam2",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\screenshots\\INVASAO_FAIXA_20260917_163156_ID112.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\clips\\INVASAO_FAIXA_20260917_163156_ID112.mp4",
+        "causa_principal": "Pintura desgastada / ausente",
+        "causa_confianca": 0.35,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Pintura desgastada / ausente": 0.35,
+          "Sinalização pouco visível": 0.25,
+          "Ausência de segregador físico": 0.2,
+          "Conduta do condutor": 0.2
+        }
+      },
+      {
+        "timestamp": "2026-09-17T16:32:23.536019",
+        "frame": 345,
+        "tipo": "INVASAO_FAIXA",
+        "descricao": "Invasão de Area 1",
+        "track_id": 188,
+        "classe": "Carro",
+        "confianca": 0.7,
+        "camera": "avenida_norte_cam2",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\screenshots\\INVASAO_FAIXA_20260917_163223_ID188.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\clips\\INVASAO_FAIXA_20260917_163223_ID188.mp4",
+        "causa_principal": "Pintura desgastada / ausente",
+        "causa_confianca": 0.35,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Pintura desgastada / ausente": 0.35,
+          "Sinalização pouco visível": 0.25,
+          "Ausência de segregador físico": 0.2,
+          "Conduta do condutor": 0.2
+        }
+      },
+      {
+        "timestamp": "2026-09-17T16:32:24.158405",
+        "frame": 349,
+        "tipo": "AVANCO_SINAL_VERMELHO",
+        "descricao": "Cruzou Linha de Retencao com sinal VERMELHO",
+        "track_id": 187,
+        "classe": "Carro",
+        "confianca": 0.677,
+        "camera": "avenida_norte_cam2",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\screenshots\\AVANCO_SINAL_VERMELHO_20260917_163224_ID187.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\clips\\AVANCO_SINAL_VERMELHO_20260917_163224_ID187.mp4",
+        "causa_principal": "Tempo semafórico inadequado",
+        "causa_confianca": 0.35,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Tempo semafórico inadequado": 0.35,
+          "Congestionamento": 0.25,
+          "Conduta do condutor": 0.25,
+          "Sinalização pouco visível": 0.15
+        }
+      },
+      {
+        "timestamp": "2026-09-17T16:32:24.319369",
+        "frame": 350,
+        "tipo": "INVASAO_FAIXA",
+        "descricao": "Invasão de Area 1",
+        "track_id": 187,
+        "classe": "Carro",
+        "confianca": 0.725,
+        "camera": "avenida_norte_cam2",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\screenshots\\INVASAO_FAIXA_20260917_163224_ID187.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\clips\\INVASAO_FAIXA_20260917_163224_ID187.mp4",
+        "causa_principal": "Pintura desgastada / ausente",
+        "causa_confianca": 0.35,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Pintura desgastada / ausente": 0.35,
+          "Sinalização pouco visível": 0.25,
+          "Ausência de segregador físico": 0.2,
+          "Conduta do condutor": 0.2
+        }
+      },
+      {
+        "timestamp": "2026-09-17T16:32:27.733108",
+        "frame": 370,
+        "tipo": "INVASAO_FAIXA",
+        "descricao": "Cruzou Linha 1",
+        "track_id": 201,
+        "classe": "Carro",
+        "confianca": 0.707,
+        "camera": "avenida_norte_cam2",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\screenshots\\INVASAO_FAIXA_20260917_163227_ID201.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\clips\\INVASAO_FAIXA_20260917_163227_ID201.mp4",
+        "causa_principal": "Pintura desgastada / ausente",
+        "causa_confianca": 0.35,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Pintura desgastada / ausente": 0.35,
+          "Sinalização pouco visível": 0.25,
+          "Ausência de segregador físico": 0.2,
+          "Conduta do condutor": 0.2
+        }
+      },
+      {
+        "timestamp": "2026-09-17T16:32:29.440511",
+        "frame": 381,
+        "tipo": "INVASAO_FAIXA",
+        "descricao": "Invasão de Area 1",
+        "track_id": 212,
+        "classe": "Carro",
+        "confianca": 0.506,
+        "camera": "avenida_norte_cam2",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\screenshots\\INVASAO_FAIXA_20260917_163229_ID212.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\clips\\INVASAO_FAIXA_20260917_163229_ID212.mp4",
+        "causa_principal": "Pintura desgastada / ausente",
+        "causa_confianca": 0.35,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Pintura desgastada / ausente": 0.35,
+          "Sinalização pouco visível": 0.25,
+          "Ausência de segregador físico": 0.2,
+          "Conduta do condutor": 0.2
+        }
+      },
+      {
+        "timestamp": "2026-09-17T16:32:29.440511",
+        "frame": 381,
+        "tipo": "AVANCO_SINAL_VERMELHO",
+        "descricao": "Cruzou Linha de Retencao com sinal VERMELHO",
+        "track_id": 206,
+        "classe": "Carro",
+        "confianca": 0.833,
+        "camera": "avenida_norte_cam2",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\screenshots\\AVANCO_SINAL_VERMELHO_20260917_163229_ID206.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\clips\\AVANCO_SINAL_VERMELHO_20260917_163229_ID206.mp4",
+        "causa_principal": "Tempo semafórico inadequado",
+        "causa_confianca": 0.35,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Tempo semafórico inadequado": 0.35,
+          "Congestionamento": 0.25,
+          "Conduta do condutor": 0.25,
+          "Sinalização pouco visível": 0.15
+        }
+      },
+      {
+        "timestamp": "2026-09-17T16:32:29.614196",
+        "frame": 382,
+        "tipo": "INVASAO_FAIXA",
+        "descricao": "Invasão de Area 1",
+        "track_id": 206,
+        "classe": "Carro",
+        "confianca": 0.635,
+        "camera": "avenida_norte_cam2",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\screenshots\\INVASAO_FAIXA_20260917_163229_ID206.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\clips\\INVASAO_FAIXA_20260917_163229_ID206.mp4",
+        "causa_principal": "Pintura desgastada / ausente",
+        "causa_confianca": 0.35,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Pintura desgastada / ausente": 0.35,
+          "Sinalização pouco visível": 0.25,
+          "Ausência de segregador físico": 0.2,
+          "Conduta do condutor": 0.2
+        }
+      },
+      {
+        "timestamp": "2026-09-17T16:32:33.080468",
+        "frame": 399,
+        "tipo": "INVASAO_FAIXA",
+        "descricao": "Invasão de Area 1",
+        "track_id": 220,
+        "classe": "Carro",
+        "confianca": 0.781,
+        "camera": "avenida_norte_cam2",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\screenshots\\INVASAO_FAIXA_20260917_163233_ID220.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste2\\evidencias\\clips\\INVASAO_FAIXA_20260917_163233_ID220.mp4",
+        "causa_principal": "Pintura desgastada / ausente",
+        "causa_confianca": 0.35,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Pintura desgastada / ausente": 0.35,
+          "Sinalização pouco visível": 0.25,
+          "Ausência de segregador físico": 0.2,
+          "Conduta do condutor": 0.2
+        }
+      }
+    ]
+  },
+  "video_teste4": {
+    "id": "video_teste4",
+    "grupo": "gta",
+    "path": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\videos_originais\\video_teste5_recorte.mp4",
+    "preset": "gta2",
+    "camera": "gta_cam1",
+    "total_ocorrencias": 6,
+    "contagem_por_tipo": {
+      "INVASAO_FAIXA": 3,
+      "BLOQUEIO_CRUZAMENTO": 3
+    },
+    "ocorrencias": [
+      {
+        "timestamp": "2026-09-17T16:32:50.975647",
+        "frame": 1,
+        "tipo": "INVASAO_FAIXA",
+        "descricao": "Invasão de Area 1",
+        "track_id": 2,
+        "classe": "Carro",
+        "confianca": 0.607,
+        "camera": "gta_cam1",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste4\\evidencias\\screenshots\\INVASAO_FAIXA_20260917_163250_ID2.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste4\\evidencias\\clips\\INVASAO_FAIXA_20260917_163250_ID2.mp4",
+        "causa_principal": "Pintura desgastada / ausente",
+        "causa_confianca": 0.35,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Pintura desgastada / ausente": 0.35,
+          "Sinalização pouco visível": 0.25,
+          "Ausência de segregador físico": 0.2,
+          "Conduta do condutor": 0.2
+        }
+      },
+      {
+        "timestamp": "2026-09-17T16:33:15.053946",
+        "frame": 151,
+        "tipo": "BLOQUEIO_CRUZAMENTO",
+        "descricao": "Bloqueio de cruzamento há 5.0s",
+        "track_id": 1,
+        "classe": "Carro",
+        "confianca": 0.62,
+        "camera": "gta_cam1",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste4\\evidencias\\screenshots\\BLOQUEIO_CRUZAMENTO_20260917_163315_ID1.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste4\\evidencias\\clips\\BLOQUEIO_CRUZAMENTO_20260917_163315_ID1.mp4",
+        "causa_principal": "Congestionamento",
+        "causa_confianca": 0.45,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Congestionamento": 0.45,
+          "Tempo semafórico inadequado": 0.25,
+          "Conduta do condutor": 0.2,
+          "Sinalização pouco visível": 0.1
+        }
+      },
+      {
+        "timestamp": "2026-09-17T16:33:35.086732",
+        "frame": 272,
+        "tipo": "INVASAO_FAIXA",
+        "descricao": "Invasão de Area 1",
+        "track_id": 26,
+        "classe": "Carro",
+        "confianca": 0.711,
+        "camera": "gta_cam1",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste4\\evidencias\\screenshots\\INVASAO_FAIXA_20260917_163335_ID26.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste4\\evidencias\\clips\\INVASAO_FAIXA_20260917_163335_ID26.mp4",
+        "causa_principal": "Pintura desgastada / ausente",
+        "causa_confianca": 0.35,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Pintura desgastada / ausente": 0.35,
+          "Sinalização pouco visível": 0.25,
+          "Ausência de segregador físico": 0.2,
+          "Conduta do condutor": 0.2
+        }
+      },
+      {
+        "timestamp": "2026-09-17T16:33:59.729598",
+        "frame": 422,
+        "tipo": "BLOQUEIO_CRUZAMENTO",
+        "descricao": "Bloqueio de cruzamento há 5.0s",
+        "track_id": 27,
+        "classe": "Carro",
+        "confianca": 0.532,
+        "camera": "gta_cam1",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste4\\evidencias\\screenshots\\BLOQUEIO_CRUZAMENTO_20260917_163359_ID27.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste4\\evidencias\\clips\\BLOQUEIO_CRUZAMENTO_20260917_163359_ID27.mp4",
+        "causa_principal": "Congestionamento",
+        "causa_confianca": 0.45,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Congestionamento": 0.45,
+          "Tempo semafórico inadequado": 0.25,
+          "Conduta do condutor": 0.2,
+          "Sinalização pouco visível": 0.1
+        }
+      },
+      {
+        "timestamp": "2026-09-17T16:33:59.729598",
+        "frame": 422,
+        "tipo": "BLOQUEIO_CRUZAMENTO",
+        "descricao": "Bloqueio de cruzamento há 5.0s",
+        "track_id": 28,
+        "classe": "Carro",
+        "confianca": 0.489,
+        "camera": "gta_cam1",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste4\\evidencias\\screenshots\\BLOQUEIO_CRUZAMENTO_20260917_163359_ID28.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste4\\evidencias\\clips\\BLOQUEIO_CRUZAMENTO_20260917_163359_ID28.mp4",
+        "causa_principal": "Congestionamento",
+        "causa_confianca": 0.45,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Congestionamento": 0.45,
+          "Tempo semafórico inadequado": 0.25,
+          "Conduta do condutor": 0.2,
+          "Sinalização pouco visível": 0.1
+        }
+      },
+      {
+        "timestamp": "2026-09-17T16:34:12.828238",
+        "frame": 503,
+        "tipo": "INVASAO_FAIXA",
+        "descricao": "Invasão de Area 1",
+        "track_id": 30,
+        "classe": "Carro",
+        "confianca": 0.751,
+        "camera": "gta_cam1",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste4\\evidencias\\screenshots\\INVASAO_FAIXA_20260917_163412_ID30.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste4\\evidencias\\clips\\INVASAO_FAIXA_20260917_163412_ID30.mp4",
+        "causa_principal": "Pintura desgastada / ausente",
+        "causa_confianca": 0.35,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Pintura desgastada / ausente": 0.35,
+          "Sinalização pouco visível": 0.25,
+          "Ausência de segregador físico": 0.2,
+          "Conduta do condutor": 0.2
+        }
+      }
+    ]
+  },
+  "video_teste6": {
+    "id": "video_teste6",
+    "grupo": "gta",
+    "path": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\videos_originais\\video_teste6_recorte.mp4",
+    "preset": "farol_gta",
+    "camera": "farol_gta_cam1",
+    "total_ocorrencias": 1,
+    "contagem_por_tipo": {
+      "AVANCO_SINAL_VERMELHO": 1
+    },
+    "ocorrencias": [
+      {
+        "timestamp": "2026-09-17T16:39:48.750754",
+        "frame": 1838,
+        "tipo": "AVANCO_SINAL_VERMELHO",
+        "descricao": "Cruzou Retencao 1 com sinal VERMELHO",
+        "track_id": 255,
+        "classe": "Carro",
+        "confianca": 0.687,
+        "camera": "farol_gta_cam1",
+        "screenshot": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste6\\evidencias\\screenshots\\AVANCO_SINAL_VERMELHO_20260917_163948_ID255.jpg",
+        "clip": "C:\\Users\\Joice\\frontend cognimove\\CogniMove\\backend\\outputs\\runs\\video_teste6\\evidencias\\clips\\AVANCO_SINAL_VERMELHO_20260917_163948_ID255.mp4",
+        "causa_principal": "Tempo semafórico inadequado",
+        "causa_confianca": 0.35,
+        "cenarios_ativos": "",
+        "distribuicao_causas": {
+          "Tempo semafórico inadequado": 0.35,
+          "Congestionamento": 0.25,
+          "Conduta do condutor": 0.25,
+          "Sinalização pouco visível": 0.15
+        }
+      }
+    ]
+  }
+}
