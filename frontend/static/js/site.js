@@ -501,6 +501,12 @@ const AnaliseModule = (() => {
       badge.className = `cm-badge ${Utils.tipoBadgeClass(occ.tipo)}`;
     }
 
+    // Nota de contexto para invasão de faixa
+    const notaInvasao = document.getElementById('anal-nota-invasao');
+    if (notaInvasao) {
+      notaInvasao.style.display = (occ.tipo === 'INVASAO_FAIXA') ? 'block' : 'none';
+    }
+
     // Selo de simulação, quando aplicável
     const simBadge = document.getElementById('anal-sim-badge');
     if (simBadge) {
@@ -868,9 +874,8 @@ const InteratividadeModule = (() => {
   let _step = 1;    // 1=início, 2=vídeo, 3=quiz, 4=resultado
 
   function _updateCounter() {
-    const total = Object.keys(_quizData).length;
     const el = document.getElementById('wiz-counter-text');
-    if (el) el.textContent = `${_vistas} de ${total} vistas`;
+    if (el) el.textContent = 'Sorteando entre as ocorrências disponíveis';
   }
 
   // ── Inicialização ────────────────────────────────────────────────────────

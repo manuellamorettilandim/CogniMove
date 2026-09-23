@@ -265,8 +265,6 @@
                   Cruzamento Centro</option>
                 <option value="video_teste2_recorte.mp4" data-preset="avenida_norte">video_teste2_recorte.mp4 — Avenida
                   Norte</option>
-                <option value="video_teste5_recorte.mp4" data-preset="gta2">video_teste5_recorte.mp4 — Simulação (GTA)
-                </option>
                 <option value="video_teste6_recorte.mp4" data-preset="farol_gta">video_teste6_recorte.mp4 — Simulação (GTA) Sinal Vermelho</option>
               </select>
               <button id="mon-btn-start" class="cm-btn cm-btn--primary" onclick="MonitorModule.start()" disabled>
@@ -554,6 +552,13 @@
               ⚠ Análise probabilística — não é prova definitiva de causa.
             </p>
           </div>
+          <div class="cm-info-callout" id="anal-nota-invasao" style="display:none;">
+            <span class="cm-info-callout__icon">💡</span>
+            <span><strong>Como funciona a detecção de "invasão":</strong> o
+            sistema conta o veículo que entra na área demarcada da faixa —
+            não verifica se havia pedestre presente no momento. É um
+            indicador de risco geométrico, não prova de conflito real.</span>
+          </div>
 
           <!-- Distribution donut chart -->
           <div class="cm-chart-wrap">
@@ -639,6 +644,12 @@
             </div>
             <div class="cm-chart-legend" id="rel-donut-legend" role="list" aria-label="Legenda do gráfico"></div>
           </div>
+          <div class="cm-info-callout">
+            <span class="cm-info-callout__icon">💡</span>
+            <span><strong>Como funciona a detecção de "invasão":</strong>
+            é contabilizada por zona geométrica — o veículo entrou na área
+            demarcada, independente de haver pedestre presente no momento.</span>
+          </div>
         </div>
 
         <!-- Horizontal bar: top causes -->
@@ -704,7 +715,7 @@
         </div>
         <!-- Contador de ocorrências vistas -->
         <div class="cm-counter-badge" id="wiz-counter" aria-live="polite">
-          <span id="wiz-counter-text">0 de 6 vistas</span>
+          <span id="wiz-counter-text">Sorteando entre as ocorrências disponíveis</span>
         </div>
       </div>
 
@@ -752,8 +763,7 @@
           <div class="cm-wiz-inicio__rules">
             <div class="cm-wiz-rule"><span class="cm-wiz-rule__icon">🎲</span><span>Sorteio automático — sem escolha
                 manual</span></div>
-            <div class="cm-wiz-rule"><span class="cm-wiz-rule__icon">🔄</span><span>Até 6 ocorrências por sessão sem
-                repetição</span></div>
+            <div class="cm-wiz-rule"><span class="cm-wiz-rule__icon">🔄</span><span>Sorteio sem repetição na mesma sessão</span></div>
             <div class="cm-wiz-rule"><span class="cm-wiz-rule__icon">🤖</span><span>Confira a análise do CogniMove ao
                 final</span></div>
           </div>
@@ -908,16 +918,28 @@
               </div>
             </div>
             <h2 id="h2-sobre" class="cm-page-title mt-4">Sobre o CogniMove</h2>
-            <p class="cm-sobre-desc">
-              O CogniMove é uma plataforma de monitoramento inteligente de trânsito que utiliza
-              visão computacional (YOLOv8 + ByteTrack) para identificação automática de infrações
-              e análise probabilística de causa‑raiz com base em contexto urbano.
+            <p class="cm-sobre-hook">
+              Todo dia, câmeras de trânsito registram milhares de infrações —
+              e a maioria delas vira só uma multa. O CogniMove nasceu de uma
+              pergunta diferente: e se, em vez de só punir, o sistema também
+              tentasse entender por quê?
             </p>
             <p class="cm-sobre-desc mt-3">
-              O sistema detecta três tipos de infrações — avanço de sinal vermelho, invasão de
-              faixa de pedestres/bike box e bloqueio de cruzamento — gerando evidências visuais
-              (screenshot + clipe de vídeo) e registros auditáveis em CSV e JSON Lines para
-              cada ocorrência.
+              Usando visão computacional (YOLOv8 + ByteTrack), o CogniMove
+              detecta infrações de trânsito em tempo real — avanço de sinal
+              vermelho, invasão de faixa de pedestres e bloqueio de
+              cruzamento — e vai além: cruza cada ocorrência com fatores
+              urbanos (chuva, horário de pico, feriados) para apontar
+              possíveis causas raiz, como sinalização desgastada ou tempo
+              semafórico mal dimensionado.
+            </p>
+            <div class="cm-sobre-quote">
+              Não é uma sentença — é uma hipótese, sempre acompanhada da
+              confiança estatística por trás dela.
+            </div>
+            <p class="cm-sobre-desc mt-3">
+              A ideia é simples: cidades mais seguras começam com
+              diagnósticos melhores, não só com mais multas.
             </p>
           </div>
 
@@ -935,7 +957,6 @@
                 </div>
                 <div>
                   <p class="cm-team-member__name">Manuella Moretti Landim</p>
-                  <p class="cm-team-member__role">Equipe do Projeto</p>
                 </div>
               </div>
               <div class="cm-team-member">
@@ -948,7 +969,6 @@
                 </div>
                 <div>
                   <p class="cm-team-member__name">Melissa Nunes de Oliveira</p>
-                  <p class="cm-team-member__role">Equipe do Projeto</p>
                 </div>
               </div>
               <div class="cm-team-member">
@@ -961,7 +981,6 @@
                 </div>
                 <div>
                   <p class="cm-team-member__name">Raíssa Ramos</p>
-                  <p class="cm-team-member__role">Equipe do Projeto</p>
                 </div>
               </div>
             </div>
