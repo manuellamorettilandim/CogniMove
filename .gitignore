@@ -1,0 +1,57 @@
+# Configurações locais / Chaves de API
+.env
+
+# Pesos do YOLOv8 (Modelo final best.pt incluído)
+*.pt
+!backend/models/best.pt
+backend/outputs/runs/
+
+# Datasets e saídas de execução (arquivos pesados)
+backend/training/datasets/
+backend/outputs/*
+!backend/outputs/interatividade_quiz.json
+backend/outputs/uploads/
+
+# Vídeos anotados gerados localmente (--salvar-video)
+videos_treinados/
+
+# Arquivos de mídia pesados
+*.mp4
+!videos_originais/video_interatividade_corte.mp4
+*.avi
+*.mov
+*.mkv
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Ambientes virtuais e IDEs
+.venv/
+venv/
+env/
+.vscode/
+.idea/
+.DS_Store
+
+# Node / Frontend
+node_modules/
+frontend/.env
+
+# Arquivos compactados
+cognimovezipado.zip
+*.zip
+
+# Logs de depuração e backups locais
+*.bak.*
+resultado_validacao.txt
+
+# Ferramentas descartáveis de apoio à demonstração
+scratch_datas_chuva.py
+scratch_datas_jogo.py
+scratch_diag_semaforo.py
+scratch_cortar_videos.py
+backend/scratch_gerar_curados.py
+backend/scratch_calcular_medias.py

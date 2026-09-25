@@ -1,0 +1,12 @@
+# Configuração do Dataset CogniMove - Classe Limite
+train: dataset_limite/train/images
+val: dataset_limite/valid/images
+test: dataset_limite/test/images
+
+# Classes
+names:
+  0: Limite
+  1: Faixa_Pedestre
+  2: Semaforo
+
+nc: 3

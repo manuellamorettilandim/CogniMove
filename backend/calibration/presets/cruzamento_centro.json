@@ -1,0 +1,97 @@
+{
+  "name": "cruzamento_centro",
+  "ref_width": 352,
+  "ref_height": 240,
+  "lines": [
+    {
+      "name": "Linha 1",
+      "pt1": [
+        132,
+        144
+      ],
+      "pt2": [
+        249,
+        140
+      ],
+      "color": [
+        0,
+        255,
+        255
+      ]
+    }
+  ],
+  "stop_lines": [
+    {
+      "name": "Retencao 1",
+      "pt1": [
+        125,
+        148
+      ],
+      "pt2": [
+        246,
+        147
+      ],
+      "color": [
+        0,
+        0,
+        255
+      ]
+    }
+  ],
+  "polygons": [
+    {
+      "name": "Area 1",
+      "type": "bike_box",
+      "points": [
+        [
+          143,
+          131
+        ],
+        [
+          139,
+          139
+        ],
+        [
+          253,
+          137
+        ],
+        [
+          248,
+          130
+        ],
+        [
+          144,
+          130
+        ]
+      ]
+    }
+  ],
+  "intersection_polygons": [
+    {
+      "name": "Cruzamento 1",
+      "type": "intersection",
+      "points": [
+        [
+          123,
+          153
+        ],
+        [
+          93,
+          208
+        ],
+        [
+          334,
+          224
+        ],
+        [
+          274,
+          152
+        ],
+        [
+          127,
+          155
+        ]
+      ]
+    }
+  ]
+}

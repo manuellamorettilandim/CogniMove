@@ -1,0 +1,165 @@
+#!/usr/bin/env python3
+"""
+CogniMove — Monitor de Infrações em Tempo Real
+Ponto de entrada principal (CLI).
+
+Exemplos de uso:
+  python monitorar_infracoes.py --source 0
+  python monitorar_infracoes.py --source rtsp://192.168.1.10/stream
+  python monitorar_infracoes.py --source ../videos_teste/video_teste.mp4 --janela
+  python monitorar_infracoes.py --source 0 --preset caetano_alvares --dashboard
+  python monitorar_infracoes.py --source video.mp4 --dashboard --porta 5000
+"""
+import os
+import sys
+import argparse
+import threading
+import queue
+from pathlib import Path
+
+# Garantir que detection/, backend/ e a raiz do projeto estejam no path
+_HERE    = Path(__file__).resolve().parent   # detection/
+_BACKEND = _HERE.parent                      # backend/
+_ROOT    = _BACKEND.parent                   # Cognimove_Melissa/
+sys.path.insert(0, str(_ROOT))
+sys.path.insert(0, str(_HERE))
+sys.path.insert(0, str(_BACKEND))
+
+
+def parse_args():
+    p = argparse.ArgumentParser(
+        description="CogniMove — Detecção de Infrações de Trânsito em Tempo Real",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=__doc__,
+    )
+    p.add_argument(
+        "--source", "-s", default=None,
+        help="Fonte de vídeo: 0 (webcam), rtsp://..., ou caminho de arquivo."
+             " Padrão: busca automática em videos_teste/",
+    )
+    p.add_argument(
+        "--preset", "-p", default="general",
+        help="Nome do preset de câmera em backend/calibration/presets/ (sem .json). "
+             "Padrão: general",
+    )
+    p.add_argument(
+        "--camera", "-c", default="Camera 1",
+        help="Nome identificador da câmera (aparece no relatório). Padrão: 'Camera 1'",
+    )
+    p.add_argument(
+        "--janela", "-j", action="store_true",
+        help="Exibir janela OpenCV com o vídeo anotado (pressione Q para sair).",
+    )
+    p.add_argument(
+        "--dashboard", "-d", action="store_true",
+        help="Iniciar o dashboard web Flask em paralelo.",
+    )
+    p.add_argument(
+        "--salvar-video", "-sv", "--gravar-completo", action="store_true",
+        help="Salvar o vídeo anotado completo em videos_treinados/ (nome baseado no preset e timestamp).",
+    )
+    p.add_argument(
+        "--porta", type=int, default=5000,
+        help="Porta do dashboard Flask. Padrão: 5000",
+    )
+    return p.parse_args()
+
+
+from utils_video import resolver_fonte_video, PASTAS_VIDEO, EXTENSOES_VIDEO
+
+
+def find_source(source_arg):
+    """Resolve a fonte de vídeo: tenta numérico, depois busca arquivo."""
+    if source_arg is not None:
+        return resolver_fonte_video(source_arg, root=_ROOT)
+
+    # Busca automática em videos_teste/ e videos_originais/
+    videos = []
+    for pasta_nome in PASTAS_VIDEO:
+        d = _ROOT / pasta_nome
+        if d.exists():
+            for ext in EXTENSOES_VIDEO:
+                videos.extend(d.glob(f"*{ext}"))
+    if videos:
+        videos.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+        chosen = str(videos[0])
+        print(f"[Auto] Vídeo localizado: {chosen}")
+        return chosen
+
+    print("[Erro] Nenhuma fonte de vídeo encontrada. Use --source para especificar.")
+    sys.exit(1)
+
+
+def start_dashboard(frame_q, infracoes_q, port: int):
+    """Inicializa o servidor Flask em uma thread separada."""
+    frontend_dir = _ROOT / "frontend"
+    sys.path.insert(0, str(frontend_dir))
+    try:
+        import app as flask_app
+        flask_app.frame_queue     = frame_q
+        flask_app.infracoes_queue = infracoes_q
+        t = threading.Thread(
+            target=lambda: flask_app.app.run(
+                host="0.0.0.0", port=port,
+                debug=False, use_reloader=False, threaded=True,
+            ),
+            daemon=True,
+        )
+        t.start()
+        print(f"[Dashboard] Disponível em http://localhost:{port}")
+    except Exception as e:
+        print(f"[Aviso] Não foi possível iniciar o dashboard: {e}")
+
+
+def main():
+    args = parse_args()
+    source = find_source(args.source)
+
+    frame_q     = queue.Queue(maxsize=2)
+    infracoes_q = queue.Queue(maxsize=200)
+
+    if args.dashboard:
+        start_dashboard(frame_q, infracoes_q, args.porta)
+
+    # Importar detector após configurar o path
+    from infracoes.detector import InfracaoDetector
+    from analytics.contexto_urbano import GerenciadorContextoUrbano
+    from analytics.causa_raiz import MotorCausaRaiz
+
+    # Instâncias compartilhadas dos módulos analíticos
+    contexto_urbano  = GerenciadorContextoUrbano()
+    motor_causa_raiz = MotorCausaRaiz()
+
+    detector = InfracaoDetector(
+        source          = source,
+        preset_name     = args.preset,
+        models_dir      = str(_BACKEND / "models"),
+        output_dir      = str(_BACKEND / "outputs"),
+        camera_name     = args.camera,
+        show_window     = args.janela or not args.dashboard,
+        salvar_video    = args.salvar_video,
+        frame_queue     = frame_q     if args.dashboard else None,
+        infracoes_queue = infracoes_q if args.dashboard else None,
+        contexto_urbano  = contexto_urbano,
+        motor_causa_raiz = motor_causa_raiz,
+    )
+
+    print("=" * 60)
+    print(" COGNIMOVE — Sistema de Detecção de Infrações")
+    print("=" * 60)
+    print(f" Fonte:   {source}")
+    print(f" Preset:  {args.preset}")
+    print(f" Câmera:  {args.camera}")
+    if args.dashboard:
+        print(f" Dashboard: http://localhost:{args.porta}")
+    print("=" * 60)
+
+    try:
+        detector.run()
+    except KeyboardInterrupt:
+        print("\n[Interrompido] Encerrando...")
+        detector.stop()
+
+
+if __name__ == "__main__":
+    main()

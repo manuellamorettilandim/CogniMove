@@ -1,0 +1,1025 @@
+"""
+CogniMove — Estação Interativa (Módulo 4)
+
+Plataforma inteligente para detecção automática de infrações de trânsito
+com análise de causa-raiz e integração de dados urbanos em tempo real.
+
+Estrutura visual em 3 áreas (Seção 4.5 do artigo):
+  Área 1: Simulador de Câmera (Vídeo analisado pela IA com caixas delimitadoras e alertas explicativos)
+  Área 2: Contexto Urbano Real (fatores obtidos por data/hora via APIs de clima,
+          feriados e agenda esportiva; obra viária informada manualmente)
+  Área 3: Centro de Diagnóstico Inteligente (Gráficos, causas-raiz, correlações e recomendações públicas)
+
+Uso:
+  streamlit run frontend/dashboard_streamlit.py
+"""
+from __future__ import annotations
+
+import os
+import sys
+import json
+import time
+import datetime
+import re
+import threading
+from pathlib import Path
+
+import cv2
+import numpy as np
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import streamlit as st
+
+# ── Paths absolutos ───────────────────────────────────────────────────────────
+_FRONTEND = Path(__file__).resolve().parent       # frontend/
+_ROOT     = _FRONTEND.parent                      # COGNIMOVE/
+_BACKEND  = _ROOT / "backend"
+_OUTPUTS  = _BACKEND / "outputs"
+_REPORTS  = _OUTPUTS / "relatorios"
+_PRESETS  = _BACKEND / "calibration" / "presets"
+
+sys.path.insert(0, str(_BACKEND))
+sys.path.insert(0, str(_BACKEND / "detection"))
+sys.path.insert(0, str(_FRONTEND))
+sys.path.insert(0, str(_ROOT))
+
+from analytics.contexto_urbano import GerenciadorContextoUrbano
+from analytics.contexto_tempo_real import construir_contexto_a_partir_de_data
+from analytics.causa_raiz import MotorCausaRaiz, Causa
+from recomendacoes import RECOMENDACOES_POR_CAUSA
+from utils_dashboard import (
+    coletar_avisos,
+    obter_causa_predominante,
+    resumir_contexto,
+    traduzir_avisos_contexto,
+    formatar_selo_procedencia,
+    formatar_contrafactual_diagnostico,
+    montar_tabela_procedencia_causas,
+    montar_resumo_contribuicoes,
+    extrair_procedencia_segura,
+)
+
+
+# ── Configuração da Página ────────────────────────────────────────────────────
+
+st.set_page_config(
+    page_title="CogniMove — Estação Interativa de Mobilidade",
+    page_icon="🚦",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# ── Design System & Estilos Modernos ──────────────────────────────────────────
+
+st.markdown("""
+<style>
+    /* Estilo geral */
+    .stApp {
+        background-color: #0d1117;
+        color: #e6edf3;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    /* Header principal */
+    .main-header {
+        background: linear-gradient(135deg, #10162f 0%, #1a234e 50%, #0c3358 100%);
+        border: 1px solid rgba(0, 229, 255, 0.25);
+        border-radius: 14px;
+        padding: 1.4rem 2rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+    .main-header h1 {
+        color: #00e5ff;
+        font-size: 2.1rem;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        margin: 0;
+    }
+    .main-header p {
+        color: #90a4ae;
+        font-size: 0.98rem;
+        margin-top: 0.35rem;
+        margin-bottom: 0;
+    }
+    .badge-pill {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        background: rgba(0, 229, 255, 0.15);
+        color: #00e5ff;
+        border: 1px solid rgba(0, 229, 255, 0.35);
+        margin-top: 8px;
+    }
+
+    /* Cards de métrica */
+    div[data-testid="stMetric"] {
+        background: linear-gradient(145deg, #161b22, #0d1117);
+        border: 1px solid #30363d;
+        border-radius: 10px;
+        padding: 0.9rem 1.1rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    div[data-testid="stMetric"] label {
+        color: #58a6ff !important;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    div[data-testid="stMetric"] [data-testid="stMetricValue"] {
+        color: #f0f6fc !important;
+        font-weight: 700;
+    }
+
+    /* Alertas de infração */
+    .infraction-alert {
+        background: rgba(248, 81, 73, 0.15);
+        border-left: 4px solid #f85149;
+        border-radius: 6px;
+        padding: 12px 16px;
+        margin-bottom: 12px;
+        color: #ff7b72;
+        font-size: 0.92rem;
+    }
+
+    /* Painel de Recomendações */
+    .policy-box {
+        background: linear-gradient(145deg, #0e2a27, #13232f);
+        border: 1px solid #238636;
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin-top: 10px;
+        color: #7ee787;
+        font-size: 0.9rem;
+    }
+
+    /* Painel de Simulação "E se?" */
+    .sim-box {
+        background: linear-gradient(145deg, #1a1040, #13102b);
+        border: 1px solid rgba(124, 77, 255, 0.55);
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin-top: 6px;
+        color: #ce93d8;
+        font-size: 0.9rem;
+    }
+    .sim-result {
+        background: rgba(124, 77, 255, 0.12);
+        border-left: 3px solid #7c4dff;
+        border-radius: 6px;
+        padding: 10px 14px;
+        margin-top: 10px;
+        color: #e1bee7;
+        font-size: 0.92rem;
+    }
+    .sim-label {
+        display: inline-block;
+        background: rgba(124, 77, 255, 0.25);
+        color: #ce93d8;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: 20px;
+        margin-bottom: 6px;
+    }
+    /* Banner de aviso de simulação (vídeo sintético) */
+    .sim-banner {
+        background: linear-gradient(90deg, rgba(255, 152, 0, 0.18) 0%, rgba(255, 193, 7, 0.12) 100%);
+        border: 1.5px solid rgba(255, 152, 0, 0.7);
+        border-radius: 8px;
+        padding: 10px 16px;
+        margin-bottom: 10px;
+        color: #ffcc02;
+        font-size: 0.88rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+
+# ── Inicialização do Estado Compartilhado ─────────────────────────────────────
+
+class VideoProcessingState:
+    """Estrutura protegida por lock para comunicação thread-safe com o Streamlit."""
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.is_running = False
+        self.stop_requested = False
+        self.latest_frame = None
+        self.latest_infractions = []
+        self.progress = 0.0
+        self.frame_idx = 0
+        self.total_frames = 0
+        self.status_message = "Pronto para iniciar."
+        self.error_message = None
+        self.completed = False
+        self.thread = None
+
+
+def processar_video_worker(state: VideoProcessingState, video_path: str, preset_name: str, usar_ia: bool, contexto, motor):
+    """Executa a leitura e detecção de frames em segundo plano em thread separada."""
+    with state.lock:
+        state.is_running = True
+        state.stop_requested = False
+        state.completed = False
+        state.error_message = None
+        state.status_message = "Iniciando processamento..."
+        state.progress = 0.0
+        state.frame_idx = 0
+
+    detector = None
+    if usar_ia:
+        try:
+            from infracoes.detector import InfracaoDetector
+            detector = InfracaoDetector(
+                source          = video_path,
+                preset_name     = preset_name,
+                camera_name     = preset_name.replace("_", " ").title(),
+                show_window     = False,
+                contexto_urbano = contexto,
+                motor_causa_raiz= motor,
+            )
+        except Exception as e:
+            with state.lock:
+                state.error_message = f"Erro ao instanciar detector com IA: {e}"
+                state.is_running = False
+                state.status_message = "Erro na inicialização"
+            return
+
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        with state.lock:
+            state.error_message = f"Não foi possível ler o arquivo: {video_path}"
+            state.is_running = False
+            state.status_message = "Erro ao abrir vídeo"
+        return
+
+    try:
+        w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+        with state.lock:
+            state.total_frames = total_frames
+
+        if detector:
+            detector._setup(w, h, fps)
+
+        frame_idx = 0
+        while cap.isOpened():
+            with state.lock:
+                if state.stop_requested:
+                    break
+
+            ret, frame = cap.read()
+            if not ret:
+                break
+            frame_idx += 1
+
+            infractions = []
+            if detector:
+                annotated_frame, infractions = detector._process_frame(frame)
+                display_frame = annotated_frame
+            else:
+                display_frame = frame
+
+            # Redimensionar para exibição se necessário
+            rgb = cv2.cvtColor(display_frame, cv2.COLOR_BGR2RGB)
+            max_w = 700
+            if w > max_w:
+                scale = max_w / w
+                rgb = cv2.resize(rgb, (max_w, int(h * scale)))
+
+            prog = min(frame_idx / total_frames, 1.0) if total_frames > 0 else 0.0
+
+            with state.lock:
+                state.latest_frame = rgb
+                state.latest_infractions = infractions
+                state.progress = prog
+                state.frame_idx = frame_idx
+                state.status_message = f"Processando frame {frame_idx}/{total_frames}" if total_frames > 0 else f"Frame {frame_idx}"
+
+            time.sleep(0.03)
+
+    except Exception as e:
+        with state.lock:
+            state.error_message = f"Erro durante processamento: {e}"
+    finally:
+        cap.release()
+        if detector and hasattr(detector, "stop"):
+            try:
+                detector.stop()
+            except Exception:
+                pass
+        with state.lock:
+            state.is_running = False
+            if state.stop_requested:
+                state.status_message = "⏹️ Processamento interrompido pelo usuário."
+            else:
+                state.completed = True
+                state.status_message = "✅ Execução concluída com sucesso!"
+
+
+if "proc_state" not in st.session_state:
+    st.session_state.proc_state = VideoProcessingState()
+
+if "contexto" not in st.session_state:
+    st.session_state.contexto = GerenciadorContextoUrbano()
+
+if "motor" not in st.session_state:
+    st.session_state.motor = MotorCausaRaiz()
+
+if "processando" not in st.session_state:
+    st.session_state.processando = False
+
+
+# ── Utilitários de Dados ──────────────────────────────────────────────────────
+
+def encontrar_csv_mais_recente() -> str | None:
+    """Retorna o CSV de relatório mais recente."""
+    if not _REPORTS.exists():
+        return None
+    csvs = sorted(_REPORTS.glob("*.csv"), key=os.path.getmtime, reverse=True)
+    return str(csvs[0]) if csvs else None
+
+
+def carregar_dados() -> pd.DataFrame:
+    """Lê o CSV mais recente e garante tipagem."""
+    csv_path = encontrar_csv_mais_recente()
+    if csv_path and os.path.exists(csv_path):
+        try:
+            df = pd.read_csv(csv_path, encoding="utf-8")
+            if not df.empty:
+                return df
+        except Exception:
+            pass
+    return pd.DataFrame()
+
+
+def listar_videos() -> list[str]:
+    """Lista todos os vídeos disponíveis nas pastas de vídeo.
+
+    Usa PASTAS_VIDEO de backend/detection/utils_video.py como fonte da verdade
+    para as pastas varridas, eliminando duplicação de lógica.
+    """
+    from utils_video import PASTAS_VIDEO, EXTENSOES_VIDEO
+    candidatos = []
+    for pasta_nome in PASTAS_VIDEO:
+        p = _ROOT / pasta_nome
+        if p.exists():
+            for ext in EXTENSOES_VIDEO:
+                candidatos.extend(p.glob(f"*{ext}"))
+    return sorted(list(set(str(v) for v in candidatos)))
+
+
+def listar_presets() -> list[str]:
+    """Lista presets de calibração disponíveis."""
+    if _PRESETS.exists():
+        return [p.stem for p in _PRESETS.glob("*.json")]
+    return ["general"]
+
+
+def carregar_fonte_preset(nome_preset: str) -> str:
+    """Lê o campo 'fonte' do preset .json especificado.
+
+    Retorna:
+        "simulacao" se o campo indicar origem sintética,
+        "campo_real" (padrão seguro) se o campo ausente ou desconhecido,
+        ou o valor literal do campo caso seja outro valor futuro.
+
+    Nunca levanta exceção — presets antigos sem o campo recebem 'campo_real'.
+    """
+    try:
+        preset_path = _PRESETS / f"{nome_preset}.json"
+        if preset_path.is_file():
+            import json as _json
+            with open(preset_path, encoding="utf-8") as _f:
+                dados = _json.load(_f)
+            return str(dados.get("fonte", "campo_real"))
+    except Exception:
+        pass
+    return "campo_real"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  CABEÇALHO
+# ══════════════════════════════════════════════════════════════════════════════
+
+st.markdown("""
+<div class="main-header">
+    <h1>🚦 CogniMove — Estação Interativa de Mobilidade Urbana</h1>
+    <p>Detecção Visual de Infrações com IA • Análise Probabilística de Causa-Raiz • Integração de Fatores Urbanos em Tempo Real</p>
+    <div class="badge-pill">Módulos 1, 2, 3 e 4 Conectados • Abordagem Diagnóstica e Preventiva</div>
+</div>
+""", unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  ÁREA 2: SIMULADOR DE FATORES EXTERNOS E CONTROLES (BARRA LATERAL)
+# ══════════════════════════════════════════════════════════════════════════════
+
+with st.sidebar:
+    st.markdown("## 📍 Seleção de Local e Vídeo")
+
+    presets = listar_presets()
+    preset_escolhido = st.selectbox(
+        "Cruzamento Monitorado:",
+        options=presets,
+        format_func=lambda x: f"Cruzamento: {x.replace('_', ' ').title()}",
+        index=0 if presets else None,
+    )
+
+    videos = listar_videos()
+    if videos:
+        video_escolhido = st.selectbox(
+            "Fluxo de Vídeo (Câmera Urbana):",
+            options=videos,
+            format_func=lambda x: Path(x).name,
+            index=0,
+        )
+    else:
+        video_escolhido = None
+        st.warning("Nenhum arquivo de vídeo encontrado.")
+
+    arquivo_enviado = st.file_uploader(
+        "Ou envie um vídeo próprio:",
+        type=["mp4", "avi", "mov", "mkv"],
+        help="Envie um vídeo do seu computador para processar com o CogniMove.",
+    )
+
+    # Manutenção futura: implementar limpeza automática de uploads antigos em backend/outputs/uploads/ para evitar acúmulo em disco
+    UPLOADS_DIR = _OUTPUTS / "uploads"
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+    if arquivo_enviado is not None:
+        nome_seguro = re.sub(r'[^A-Za-z0-9_.-]', '_', arquivo_enviado.name)
+        caminho_upload = UPLOADS_DIR / nome_seguro
+        with open(caminho_upload, "wb") as f:
+            f.write(arquivo_enviado.getbuffer())
+        video_escolhido = str(caminho_upload)
+        st.success(f"Vídeo '{arquivo_enviado.name}' carregado com sucesso.")
+
+    st.divider()
+
+    st.markdown("## 📅 Contexto da Gravação (Módulo 3)")
+    st.caption(
+        "Informe quando este vídeo foi gravado. O CogniMove consulta feriados, "
+        "clima e agenda esportiva reais para essa data e hora."
+    )
+
+    col_data, col_hora = st.columns(2)
+    with col_data:
+        data_gravacao = st.date_input(
+            "Data da gravação",
+            value=datetime.date(2026, 12, 25),
+            format="DD/MM/YYYY",
+            key="data_gravacao",
+        )
+    with col_hora:
+        hora_gravacao = st.time_input(
+            "Horário da gravação",
+            value=datetime.time(18, 0),
+            key="hora_gravacao",
+        )
+
+    obra_viaria = st.toggle(
+        "🚧 Obra viária no local",
+        key="toggle_obra",
+        help="Único fator sem fonte pública automatizável — informe manualmente.",
+    )
+
+    if st.button("🔍 Consultar contexto real", use_container_width=True, type="primary"):
+        with st.spinner("Consultando feriados, clima e jogos..."):
+            try:
+                with coletar_avisos(construir_contexto_a_partir_de_data.__module__) as avisos:
+                    st.session_state.contexto_dados = construir_contexto_a_partir_de_data(
+                        data_gravacao, hora_gravacao, obra_viaria_manual=obra_viaria
+                    )
+                st.session_state.contexto_avisos = traduzir_avisos_contexto(avisos)
+                st.session_state.contexto_erro = None
+            except Exception as e:
+                st.session_state.contexto_dados = None
+                st.session_state.contexto_avisos = []
+                st.session_state.contexto_erro = str(e)
+
+    if st.session_state.get("contexto_erro"):
+        st.warning(
+            "Não foi possível consultar todas as fontes externas "
+            f"({st.session_state.contexto_erro}). Fatores não confirmados serão "
+            "considerados inativos."
+        )
+
+    for aviso in st.session_state.get("contexto_avisos", []):
+        st.warning(aviso)
+
+    dados_ctx = st.session_state.get("contexto_dados")
+
+    if dados_ctx:
+        # O toggle de obra é manual e vale imediatamente, sem nova consulta de rede.
+        dados_ctx["obra_viaria"] = obra_viaria
+
+        # Reaplica as flags no gerenciador a cada rerun. É barato (não usa rede) e
+        # garante que o detector e o MotorCausaRaiz enxerguem sempre o contexto atual,
+        # já que o objeto é passado por referência para a thread de processamento.
+        st.session_state.contexto.atualizar_contexto(
+            chuva_forte=dados_ctx.get("chuva_forte", False),
+            dia_jogo=dados_ctx.get("dia_jogo", False),
+            horario_pico=dados_ctx.get("horario_pico", False),
+            feriado=dados_ctx.get("feriado", False),
+            obra_viaria=obra_viaria,
+        )
+
+    st.markdown("---")
+    st.markdown("### 📊 Status do Ambiente")
+
+    if dados_ctx:
+        DIAS = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira",
+                "Sexta-feira", "Sábado", "Domingo"]
+        cabecalho = (
+            f"📅 {DIAS[data_gravacao.weekday()]}, "
+            f"{data_gravacao.strftime('%d/%m/%Y')} às {hora_gravacao.strftime('%H:%M')}"
+        )
+        st.info(f"**{cabecalho}**\n\n{resumir_contexto(dados_ctx)}")
+    else:
+        st.caption("Clique em **Consultar contexto real** para carregar o contexto desta gravação.")
+
+    st.divider()
+    usar_ia = st.checkbox("⚡ Processar com Modelo de IA (YOLOv8 + ByteTrack)", value=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  DIVISÃO PRINCIPAL EM DUAS COLUNAS
+# ══════════════════════════════════════════════════════════════════════════════
+
+col_camera, col_analise = st.columns([1.6, 1.4])
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  ÁREA 1: SIMULADOR DE CÂMERA URBANA (VÍDEO + DETECÇÃO VISUAL)
+# ══════════════════════════════════════════════════════════════════════════════
+
+with col_camera:
+    st.markdown("### 📹 Área 1: Simulador de Câmera Urbana")
+    st.caption(f"Cruzamento selecionado: **{preset_escolhido.replace('_', ' ').title()}**")
+
+    # Aviso de simulação — exibido quando o preset usa material sintético (motor de jogo)
+    _fonte_preset = carregar_fonte_preset(preset_escolhido)
+    if _fonte_preset == "simulacao":
+        st.markdown(
+            "<div class='sim-banner'>"
+            "⚠️ <b>SIMULAÇÃO</b> — cena gerada em motor de jogo, usada para demonstração visual. "
+            "A detecção roda normalmente sobre este material sintético."
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+    frame_placeholder = st.empty()
+    alert_placeholder = st.empty()
+
+    btn_col1, btn_col2 = st.columns(2)
+    with btn_col1:
+        iniciar = st.button("▶️ Iniciar Monitoramento", type="primary", use_container_width=True)
+    with btn_col2:
+        parar = st.button("⏹️ Parar", use_container_width=True)
+
+    proc_state = st.session_state.proc_state
+
+    # Ação de parar: seta flag protegida por lock
+    if parar:
+        with proc_state.lock:
+            proc_state.stop_requested = True
+        st.session_state.processando = False
+        st.rerun()
+
+    if iniciar and not st.session_state.get("contexto_dados"):
+        st.warning("⚠️ Consulte o contexto da gravação (barra lateral) antes de iniciar o monitoramento.")
+        iniciar = False
+
+    # Ação de iniciar: dispara worker em thread dedicada (se não houver outra ativa)
+    if iniciar and video_escolhido:
+        with proc_state.lock:
+            ja_executando = proc_state.is_running
+
+        if not ja_executando:
+            t = threading.Thread(
+                target=processar_video_worker,
+                args=(
+                    proc_state,
+                    video_escolhido,
+                    preset_escolhido,
+                    usar_ia,
+                    st.session_state.contexto,
+                    st.session_state.motor,
+                ),
+                daemon=True,
+            )
+            with proc_state.lock:
+                proc_state.is_running = True
+                proc_state.stop_requested = False
+                proc_state.completed = False
+                proc_state.error_message = None
+                proc_state.status_message = "Iniciando processamento..."
+            proc_state.thread = t
+            t.start()
+            st.session_state.processando = True
+            st.rerun()
+
+    # Leitura do estado mais recente da thread
+    with proc_state.lock:
+        is_running = proc_state.is_running
+        display_frame = proc_state.latest_frame
+        infractions = list(proc_state.latest_infractions)
+        prog = proc_state.progress
+        status_msg = proc_state.status_message
+        err_msg = proc_state.error_message
+        completed = proc_state.completed
+
+    st.session_state.processando = is_running
+
+    if err_msg:
+        st.error(err_msg)
+
+    if display_frame is not None:
+        frame_placeholder.image(display_frame, use_container_width=True)
+    elif not video_escolhido:
+        frame_placeholder.info("Nenhum arquivo de vídeo carregado. Adicione vídeos na pasta `videos_originais/` ou envie pelo campo acima.")
+    else:
+        frame_placeholder.caption("Clique em '▶️ Iniciar Monitoramento' para começar.")
+
+    # Se houver infrações detectadas no frame mais recente, exibir alerta estilo Seção 4.5
+    if infractions:
+        for inf in infractions:
+            tipo_legivel = inf["tipo"].replace("_", " ").title()
+            conf_pct = int(float(inf.get("confianca", 0.95)) * 100)
+
+            # Diagnóstico instantâneo
+            ctx = st.session_state.contexto.obter_contexto_atual()
+            causa_calc = st.session_state.motor.calcular_probabilidades(inf["tipo"], ctx)
+            causa_top = causa_calc.get("causa_principal", "Em investigação")
+            causa_conf = int(float(causa_calc.get("confianca", 0.5)) * 100)
+
+            alert_placeholder.markdown(
+                f'<div class="infraction-alert">'
+                f'🚨 <b>Infração Detectada:</b> {tipo_legivel} — Confiança da IA: <b>{conf_pct}%</b><br>'
+                f'🔍 <b>Causa-Raiz Provável:</b> {causa_top} (Probabilidade: <b>{causa_conf}%</b>)'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+    # Atualização fluida da interface
+    if is_running:
+        st.progress(prog, text=status_msg)
+        time.sleep(0.04)
+        st.rerun()
+    elif completed:
+        st.progress(1.0, text=status_msg)
+        alert_placeholder.success("Processamento do fluxo finalizado. Os relatórios foram salvos e integrados.")
+    elif status_msg and "interrompido" in status_msg:
+        st.warning(status_msg)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  ÁREA 3: CENTRO DE DIAGNÓSTICO INTELIGENTE E CAUSA-RAIZ
+# ══════════════════════════════════════════════════════════════════════════════
+
+with col_analise:
+    st.markdown("### 🧠 Área 3: Centro de Diagnóstico Inteligente")
+    st.caption("Visão diagnóstica orientada à infraestrutura e causas-raiz urbanas.")
+
+    df = carregar_dados()
+
+    if df.empty:
+        st.info("Nenhum registro de infração encontrado. Inicie o monitoramento ou consulte relatórios.")
+    else:
+        # 1. Métricas principais
+        kpi1, kpi2, kpi3 = st.columns(3)
+        with kpi1:
+            st.metric("Total de Infrações", len(df))
+        with kpi2:
+            if "tipo" in df.columns:
+                st.metric("Tipos Identificados", df["tipo"].nunique())
+        with kpi3:
+            if "causa_principal" in df.columns:
+                top_causa = obter_causa_predominante(df, default="N/A")
+                st.metric("Causa Predominante", top_causa[:18] + "…" if len(top_causa) > 18 else top_causa)
+
+        st.divider()
+
+        # 2. Gráfico de Pizza: Causa-Raiz (Como ilustrado na Seção 4.5 do artigo)
+        if "causa_principal" in df.columns:
+            causa_cont = df["causa_principal"].value_counts().reset_index()
+            causa_cont.columns = ["Causa-Raiz", "Ocorrências"]
+
+            fig_pizza = px.pie(
+                causa_cont,
+                names="Causa-Raiz",
+                values="Ocorrências",
+                title="Distribuição Probabilística de Causas-Raiz",
+                hole=0.42,
+                color_discrete_sequence=["#00e5ff", "#f50057", "#ffb300", "#00e676", "#7c4dff"],
+            )
+            fig_pizza.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#e0e0e0"),
+                title_font_color="#00e5ff",
+                height=310,
+                margin=dict(t=40, b=10, l=10, r=10),
+            )
+            st.plotly_chart(fig_pizza, use_container_width=True)
+
+        st.divider()
+
+        # 3. Gráfico de Barras: Infrações por Tipo
+        if "tipo" in df.columns:
+            tipo_cont = df["tipo"].value_counts().reset_index()
+            tipo_cont.columns = ["Tipo", "Total"]
+            tipo_cont["Tipo"] = tipo_cont["Tipo"].str.replace("_", " ").str.title()
+
+            fig_bar = px.bar(
+                tipo_cont,
+                x="Tipo",
+                y="Total",
+                title="Incidência de Infrações por Categoria",
+                color="Tipo",
+                color_discrete_sequence=px.colors.qualitative.Prism,
+            )
+            fig_bar.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#e0e0e0"),
+                title_font_color="#00e5ff",
+                showlegend=False,
+                height=260,
+                margin=dict(t=40, b=10, l=10, r=10),
+                xaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
+                yaxis=dict(gridcolor="rgba(255,255,255,0.08)"),
+            )
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+        st.divider()
+
+        # 4. Recomendações e Políticas Baseadas em Evidências (Seção 5 do artigo)
+        st.markdown("#### 🏛️ Recomendações Urbanas Inteligentes (Apoio à Gestão)")
+
+        # Lógica explicativa baseada nas causas predominantes e análise contrafactual
+        if "causa_principal" in df.columns or "tipo" in df.columns:
+            top_causa = obter_causa_predominante(df, default="")
+            total_inf = len(df)
+            causa_count = (df["causa_principal"] == top_causa).sum() if ("causa_principal" in df.columns and top_causa) else 0
+            pct_top = int((causa_count / total_inf) * 100) if total_inf > 0 and top_causa else 0
+
+            recs = RECOMENDACOES_POR_CAUSA
+            causas_sem_recomendacao = [c for c in Causa if c.value not in recs]
+            if causas_sem_recomendacao:
+                nomes = ", ".join(c.value for c in causas_sem_recomendacao)
+                st.warning(f"⚠️ Causas sem recomendação cadastrada: {nomes}")
+
+            rec_texto_fallback = recs.get(top_causa, "Recomenda-se inspeção técnica no local para avaliação dos conflitos entre pedestres e veículos.")
+
+            try:
+                # Determinar o tipo de infração representativo da via
+                tipo_infracao = None
+                if "tipo" in df.columns and not df["tipo"].dropna().empty:
+                    tipo_infracao = str(df["tipo"].mode().iloc[0])
+                else:
+                    tipo_infracao = "AVANCO_SINAL_VERMELHO"
+
+                ctx_atual = st.session_state.contexto.obter_contexto_atual()
+
+                # Análise contrafactual com transparência
+                res_cf = st.session_state.motor.calcular_com_contrafactual(tipo_infracao, ctx_atual)
+                diag_info = formatar_contrafactual_diagnostico(res_cf, limiar_diferenca_pct=5.0)
+
+                causa_vencedora_real = diag_info["causa_real"]
+                rec_texto = recs.get(causa_vencedora_real, rec_texto_fallback)
+
+                linha_real = diag_info["linha_real"]
+                linha_neutra = diag_info["linha_neutra"]
+
+                linhas_html = f"• <b>{linha_real}</b>"
+                if diag_info["mostrar_neutra"] and linha_neutra:
+                    linhas_html += f"<br>• <span style='color: #8b949e;'>{linha_neutra}</span>"
+
+                st.markdown(
+                    f'<div class="policy-box">'
+                    f'📌 <b>Diagnóstico Probabilístico (Causa-Raiz):</b><br>'
+                    f'{linhas_html}<br><br>'
+                    f'🛠️ <b>Intervenção Sugerida:</b> {rec_texto}'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+                # Expander com procedência técnica e separação de contexto vs evidência
+                with st.expander("🔍 De onde vêm estes números", expanded=False):
+                    resumo_contrib = montar_resumo_contribuicoes(res_cf.get("real", {}), contexto=ctx_atual)
+                    itens_ctx = resumo_contrib.get("contexto", [])
+                    itens_ev = resumo_contrib.get("evidencia", [])
+                    mods_ativos = resumo_contrib.get("modificadores_ativos", [])
+
+                    st.markdown("##### 📌 Fatores Ativos e Modificadores Aplicados")
+                    if mods_ativos or itens_ctx or itens_ev:
+                        if mods_ativos or itens_ctx:
+                            st.markdown("**🌐 Modificadores de Contexto Urbano (Hipótese Externa):**")
+                            for mod in mods_ativos:
+                                st.markdown(f"- **{mod['nome']}** — {mod['selo']}")
+                            for item in itens_ctx:
+                                st.markdown(f"  └ Impacto: **{item['pontos_formatado']}** na causa *\"{item['causa']}\"* ({item['selo_causa']})")
+
+                        if itens_ev:
+                            st.markdown("**🎯 Modificadores de Evidência da Cena (Medição Local):**")
+                            for item in itens_ev:
+                                st.markdown(f"- Impacto: **{item['pontos_formatado']}** na causa *\"{item['causa']}\"* ({item['selo_causa']})")
+                    else:
+                        st.info("Nenhum modificador de contexto ou evidência ativo no momento. As probabilidades refletem a distribuição base.")
+
+                    st.markdown("##### 📚 Tabela de Procedência e Distribuição")
+                    tab_causas = montar_tabela_procedencia_causas(res_cf.get("real", {}))
+                    if tab_causas:
+                        df_tab = pd.DataFrame(tab_causas)
+                        st.dataframe(df_tab, use_container_width=True, hide_index=True)
+
+            except Exception as e:
+                # Fallback seguro
+                st.markdown(
+                    f'<div class="policy-box">'
+                    f'📌 <b>Diagnóstico Sistêmico:</b> <b>{pct_top}%</b> dos eventos registrados nesta via estão vinculados a: <i>"{top_causa}"</i>.<br>'
+                    f'🛠️ <b>Intervenção Sugerida:</b> {rec_texto_fallback}'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
+            # Rodapé de honestidade fixo visível sempre que a causa-raiz for exibida
+            st.caption(
+                "Estas probabilidades combinam fontes técnicas primárias (normas da CET-SP, "
+                "Instituto de Engenharia) com estimativas da equipe, claramente distinguidas "
+                "acima. Este é um sistema de apoio à decisão, não um veredito automático."
+            )
+
+        st.divider()
+
+        # ── 5. Painel "E se?" — simulação interativa de cenários ─────────────
+        st.markdown("#### 🧪 Explorar cenários (simulação, não altera o diagnóstico real)")
+        st.caption(
+            "Marque fatores hipotéticos e veja o que o motor de probabilidades responderia. "
+            "Estes controles são totalmente independentes do contexto consultado por data."
+        )
+
+        try:
+            # Tipo de infração representativo — mesmo critério do card real, mas isolado
+            _tipo_sim = "AVANCO_SINAL_VERMELHO"
+            if "tipo" in df.columns and not df["tipo"].dropna().empty:
+                _tipo_sim = str(df["tipo"].mode().iloc[0])
+
+            _sim_col1, _sim_col2 = st.columns(2)
+            with _sim_col1:
+                _sim_chuva   = st.toggle("🌧️ Chuva forte",   key="sim_chuva",   value=False)
+                _sim_pico    = st.toggle("🕐 Horário de pico", key="sim_pico",    value=False)
+                _sim_obra    = st.toggle("🚧 Obra viária",     key="sim_obra",    value=False)
+            with _sim_col2:
+                _sim_jogo    = st.toggle("⚽ Dia de jogo",     key="sim_jogo",    value=False)
+                _sim_feriado = st.toggle("🎉 Feriado",         key="sim_feriado", value=False)
+
+            # Monta contexto simulado local — nunca toca em st.session_state.contexto
+            _ctx_sim = {
+                "chuva_forte":  _sim_chuva,
+                "horario_pico": _sim_pico,
+                "obra_viaria":  _sim_obra,
+                "dia_jogo":     _sim_jogo,
+                "feriado":      _sim_feriado,
+            }
+            # Reconstruir fatores_ativos com o dict já montado
+            _ctx_sim["fatores_ativos"] = [
+                nome
+                for chave, nome in [
+                    ("chuva_forte",  "Chuva Forte / Baixa Visibilidade"),
+                    ("horario_pico", "Horário de Pico"),
+                    ("obra_viaria",  "Obra Viária / Desvio"),
+                    ("dia_jogo",     "Dia de Jogo / Evento de Grande Porte"),
+                    ("feriado",      "Feriado"),
+                ]
+                if _ctx_sim.get(chave, False)
+            ]
+
+            _res_sim = st.session_state.motor.calcular_probabilidades(_tipo_sim, _ctx_sim)
+            _causa_sim = _res_sim.get("causa_principal", "Desconhecida")
+            _pct_sim   = int(round(float(_res_sim.get("confianca", 0.0)) * 100))
+            _fatores_sim = _ctx_sim["fatores_ativos"]
+            _fatores_label = (
+                ", ".join(_fatores_sim) if _fatores_sim else "nenhum fator ativo"
+            )
+
+            # Linha de resultado simulado — mesma estrutura do card real, cor distinta
+            _sim_html = (
+                f"<span class='sim-label'>Resultado simulado</span><br>"
+                f"<b>Com [{_fatores_label}]:</b> {_causa_sim} — {_pct_sim}%"
+            )
+
+            # Segunda linha: comparação com base neutra
+            _res_sim_neutro = st.session_state.motor.calcular_probabilidades(_tipo_sim, {})
+            _causa_sim_neutra = _res_sim_neutro.get("causa_principal", "Desconhecida")
+            _pct_sim_neutra   = int(round(float(_res_sim_neutro.get("confianca", 0.0)) * 100))
+            _diff_sim = abs(_pct_sim - _pct_sim_neutra)
+            if _causa_sim != _causa_sim_neutra or _diff_sim >= 5:
+                _sim_html += (
+                    f"<br><span style='color:#9e9e9e;'>"
+                    f"Sem nenhum fator: {_causa_sim_neutra} — {_pct_sim_neutra}%"
+                    f"</span>"
+                )
+
+            st.markdown(
+                f"<div class='sim-result'>{_sim_html}</div>",
+                unsafe_allow_html=True,
+            )
+
+        except Exception:
+            st.info("⚠️ Não foi possível simular o cenário. Tente iniciar o monitoramento primeiro.")
+
+        # ── 6. Tabela de Registros com Auditoria Humana (Seção 6 do artigo)
+        st.divider()
+
+        # 5. Tabela de Registros com Auditoria Humana (Seção 6 do artigo)
+        with st.expander("📋 Auditoria de Ocorrências e Evidências"):
+            colunas_exibir = [c for c in ["timestamp", "tipo", "confianca", "causa_principal", "causa_confianca", "cenarios_ativos"] if c in df.columns]
+            st.dataframe(df[colunas_exibir], use_container_width=True, height=220)
+
+            st.divider()
+            st.markdown("##### 🎬 Player de Evidências")
+
+            def _resolver_caminho_evidencia(caminho) -> Path | None:
+                """Resolve um caminho do CSV (pode ser relativo ou absoluto) contra a raiz do projeto."""
+                if not isinstance(caminho, str) or not caminho:
+                    return None
+                p = Path(caminho)
+                return p if p.is_absolute() else (_ROOT / p)
+
+            ocorrencias_com_clip = []
+            if "clip" in df.columns:
+                for idx, linha in df.iterrows():
+                    clip_val = linha.get("clip")
+                    if not isinstance(clip_val, str) or not clip_val or clip_val == "pendente":
+                        continue
+                    clip_path = _resolver_caminho_evidencia(clip_val)
+                    if clip_path is not None and clip_path.is_file():
+                        ocorrencias_com_clip.append((idx, linha, clip_path))
+
+            if not ocorrencias_com_clip:
+                st.info("Ainda não há evidências (clipes) gravadas nesta sessão.")
+            else:
+                def _rotulo_ocorrencia(item) -> str:
+                    idx, linha, _ = item
+                    tipo_legivel = str(linha.get("tipo", "")).replace("_", " ").title()
+                    ts_fmt = pd.to_datetime(linha.get("timestamp"), errors="coerce")
+                    ts_str = ts_fmt.strftime("%H:%M:%S") if pd.notnull(ts_fmt) else str(linha.get("timestamp", ""))
+                    causa = linha.get("causa_principal") or "Em investigação"
+                    return f"{idx} — {tipo_legivel} — {ts_str} — {causa}"
+
+                opcoes = {_rotulo_ocorrencia(item): item for item in ocorrencias_com_clip}
+                rotulo_sel = st.selectbox(
+                    "Selecione a infração para assistir a evidência:",
+                    list(opcoes.keys()),
+                )
+                _, linha_sel, clip_path_sel = opcoes[rotulo_sel]
+
+                col_video, col_foto = st.columns([2, 1])
+                with col_video:
+                    st.video(str(clip_path_sel))
+                    st.download_button(
+                        "⬇️ Baixar clipe",
+                        data=clip_path_sel.read_bytes(),
+                        file_name=clip_path_sel.name,
+                        mime="video/mp4",
+                    )
+                with col_foto:
+                    screenshot_path = _resolver_caminho_evidencia(linha_sel.get("screenshot")) if "screenshot" in df.columns else None
+                    if screenshot_path is not None and screenshot_path.is_file():
+                        st.image(str(screenshot_path), caption="Screenshot da infração", use_container_width=True)
+
+                confianca_ia = linha_sel.get("confianca")
+                confianca_causa = linha_sel.get("causa_confianca")
+                st.caption(
+                    f"**Tipo:** {str(linha_sel.get('tipo', '')).replace('_', ' ').title()}  |  "
+                    f"**Confiança da IA:** {f'{float(confianca_ia):.0%}' if pd.notnull(confianca_ia) else 'N/A'}  |  "
+                    f"**Causa-raiz:** {linha_sel.get('causa_principal') or 'N/A'}  |  "
+                    f"**Confiança da causa:** {f'{float(confianca_causa):.0%}' if pd.notnull(confianca_causa) else 'N/A'}  |  "
+                    f"**Cenários ativos:** {linha_sel.get('cenarios_ativos') or 'Nenhum'}"
+                )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  RODAPÉ
+# ══════════════════════════════════════════════════════════════════════════════
+
+st.divider()
+st.markdown(
+    "<div style='text-align: center; color: #484f58; font-size: 0.85rem;'>"
+    "CogniMove © 2026 — Pesquisa em Inteligência Artificial e Mobilidade Urbana • FECAP"
+    "</div>",
+    unsafe_allow_html=True,
+)
