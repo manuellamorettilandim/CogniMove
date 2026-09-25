@@ -1,25 +1,6 @@
-# CogniMove — Dependências Python
-# Instalar com: pip install -r requirements.txt
+# CogniMove — Dependências para deploy Vercel (serverless)
+# Para instalar TODAS as dependências (local/dev), use: pip install -r requirements-full.txt
 
-# ── Visão computacional e IA ──────────────────────────────────
-ultralytics>=8.0.0          # YOLOv8 + ByteTrack (rastreamento incluído)
-opencv-python>=4.8.0        # Processamento de vídeo e imagem
-numpy>=1.24.0               # Operações matriciais
-imageio-ffmpeg>=0.4.9       # Gravação de clipes MP4 (H.264) sem depender de codec do sistema
-
-# ── Dashboard web (Flask legado) ──────────────────────────────
-flask>=3.0.0                # Servidor web + streaming MJPEG + SSE
-
-# ── Dashboard interativo (Módulo 4 — Estação Interativa) ─────
-streamlit>=1.20.0           # Dashboard interativo com widgets
-pandas>=1.5.0               # Leitura e manipulação de relatórios CSV/JSON
-plotly>=5.10.0              # Gráficos interativos (pizza, barras, etc.)
-
-# ── Testes ───────────────────────────────────────────────────
-pytest>=7.0.0               # Framework de testes unitários
-
-# ── Utilitários ───────────────────────────────────────────────
-python-dotenv>=1.0.0        # Leitura do .env (chaves de API)
-
-# Calendario de feriados para calculo de contexto urbano por data
+flask>=3.0.0
+python-dotenv>=1.0.0
 holidays

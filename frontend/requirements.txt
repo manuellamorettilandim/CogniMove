@@ -1,0 +1,4 @@
+# Dependências mínimas para deploy Vercel (serverless)
+flask>=3.0.0
+python-dotenv>=1.0.0
+holidays
